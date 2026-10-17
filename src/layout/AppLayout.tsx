@@ -34,11 +34,11 @@ export function AppLayout() {
           </nav>
         </Container>
       </header>
-      <main className="flex-1">
+      <main className="flex-1 bg-surface">
         <Outlet />
       </main>
       <footer className="border-t border-line bg-surface py-6">
-        <Container className="text-xs text-faint">
+        <Container className="text-[13px] text-muted">
           자격 판정은 공고 문구를 기반으로 한 자동 분석이며, 최종 자격은 공고 기관 심사로 결정됩니다.
         </Container>
       </footer>

@@ -67,11 +67,17 @@ export function Home() {
               </li>
             ))}
           </ul>
-          <p className="rounded-panel bg-bg-soft px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
-            예) &ldquo;29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요. 인테리어 자금이 3천만원 정도
-            모자라요.&rdquo;
-          </p>
-          <p className="flex items-start gap-1.5 text-xs text-faint">
+          <div className="flex flex-col gap-1.5 rounded-panel bg-bg-soft px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
+            <p>
+              <span className="font-semibold text-pos">좋은 예</span> &ldquo;27세, 마포구 거주, 사업자등록 전, 디저트 카페
+              준비 중&rdquo;
+            </p>
+            <p>
+              <span className="font-semibold text-warn">부족한 예</span> &lsquo;창업 지원 알려줘&rsquo; → 확인 필요가 많이
+              나와요
+            </p>
+          </div>
+          <p className="flex items-start gap-1.5 text-[13px] text-muted">
             <Icon name="info" size={12} className="mt-0.5 shrink-0" />
             적지 않은 항목은 자격을 단정하지 않고 &lsquo;확인 필요&rsquo;로 표시해요.
           </p>

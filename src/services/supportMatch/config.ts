@@ -1,6 +1,8 @@
 /* 매칭 조정값 (명세 4-2, 5장). 가중치는 여기 한 곳에서만 바꾼다 */
 
 export const MAX_TEXT_LENGTH = 1000
+/** 입력 화면 전용 최소 길이. 서버 계약(validate.inputError)은 1자부터 받는다 */
+export const MIN_TEXT_LENGTH = 10
 
 export const SCORE = {
   similarity: 45,

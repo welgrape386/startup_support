@@ -1,185 +1,112 @@
-import { type ReactNode, useState } from 'react'
+import { useState } from 'react'
 import { Badge } from '@/components/Badge'
 import { Card } from '@/components/Card'
-import { DataBadge } from '@/components/DataBadge'
 import { Icon } from '@/components/Icon'
 import { cx } from '@/lib/cx'
-import { conditionalField, isBlocking } from '@/services/supportMatch/eligibility'
+import { conditionalField } from '@/services/supportMatch/eligibility'
 import type { MatchResult, MatchVerdict, UserProfile } from '@/services/supportMatch/types'
-import { Quote, RuleChecklist } from './RuleChecklist'
+import { RuleChecklist } from './RuleChecklist'
+import { CONDITIONAL_SUBLABEL, tabOf } from './VerdictTabs'
 
 const won = (m: number) =>
   m >= 10000 ? `${(m / 10000).toFixed(1).replace(/\.0$/, '')}억원` : `${m.toLocaleString()}만원`
 
+// D-day 는 모양을 고정한다. 공통 Badge 가 바뀌어도 따라가지 않도록 클래스를 여기 둔다
+const DAY_BASE = 'inline-flex items-center rounded-chip px-2.5 py-1 text-xs font-semibold whitespace-nowrap'
 function DayBadge({ daysLeft }: { daysLeft: number | null }) {
-  if (daysLeft == null) return <Badge tone="info">상시 모집</Badge>
-  if (daysLeft <= 3) return <Badge tone="neg">D-{daysLeft}</Badge>
-  if (daysLeft <= 7) return <Badge tone="warn">D-{daysLeft}</Badge>
-  return <Badge tone="neutral">D-{daysLeft}</Badge>
+  const [cls, text] =
+    daysLeft == null
+      ? ['bg-info-soft text-primary-600', '상시 모집']
+      : daysLeft <= 3
+        ? ['bg-neg-soft text-neg', `D-${daysLeft}`]
+        : daysLeft <= 7
+          ? ['bg-warn-soft text-warn', `D-${daysLeft}`]
+          : ['bg-bg-soft text-muted', `D-${daysLeft}`]
+  return <span className={cx(DAY_BASE, cls)}>{text}</span>
 }
 
-// A. 신호등 4종 (명세 6-A). 색 점 + 글자 라벨, 이모지 대신 Badge
-const VERDICT: Record<MatchVerdict, { tone: 'pos' | 'neutral' | 'warn' | 'neg'; label: string }> = {
-  '자격 충족': { tone: 'pos', label: '자격 충족' },
-  '확인 필요': { tone: 'neutral', label: '확인 필요' },
-  조건부: { tone: 'warn', label: '한 걸음 더' },
-  '자격 미달': { tone: 'neg', label: '해당 안 됨' },
+// A. 신호등 4종 (명세 6-A). 라벨은 VerdictTabs 상수를 함께 쓴다. head = 카드 상단 판정 헤더 색 (글자 대비 4.7 이상)
+const VERDICT: Record<MatchVerdict, { tone: 'pos' | 'neutral' | 'warn' | 'neg'; head: string }> = {
+  '자격 충족': { tone: 'pos', head: 'bg-pos-soft text-pos' },
+  '확인 필요': { tone: 'neutral', head: 'bg-bg-soft text-muted' },
+  조건부: { tone: 'warn', head: 'bg-warn-soft text-warn' },
+  '자격 미달': { tone: 'neg', head: 'bg-neg-soft text-neg' },
 }
 
-// 조건부(노랑)는 풀 수 있는 조건 종류로 사유를 나눈다 (안내 톤, 권유 표현 없음)
-const CONDITIONAL_LABEL = { bizStage: '개업 후 신청 가능', sigungu: '사업장 소재지 조건' } as const
-
-export function VerdictBadge({ verdict, label }: { verdict: MatchVerdict; label?: string }) {
-  const v = VERDICT[verdict]
+export function VerdictBadge({ verdict }: { verdict: MatchVerdict }) {
+  const t = tabOf(verdict)
   return (
-    <Badge tone={v.tone}>
-      <span aria-hidden="true" className="mr-1.5 size-1.5 rounded-full bg-current" />
-      {label ?? v.label}
+    <Badge tone={VERDICT[verdict].tone}>
+      <Icon name={t.icon} size={13} className="mr-1" />
+      {t.label}
     </Badge>
-  )
-}
-
-function Section({
-  label,
-  icon,
-  cls,
-  children,
-}: {
-  label: string
-  icon: 'check' | 'info' | 'flag'
-  cls: string
-  children: ReactNode
-}) {
-  return (
-    <section aria-label={label}>
-      <p className={cx('flex items-center gap-1.5 text-xs font-bold', cls)}>
-        <Icon name={icon} size={13} />
-        {label}
-      </p>
-      <ul className="mt-2 flex flex-col gap-2.5">{children}</ul>
-    </section>
   )
 }
 
 export function MatchCard({ result: r, profile }: { result: MatchResult; profile: UserProfile }) {
   const [open, setOpen] = useState(false)
   const p = r.program
-  const failed = r.rules.filter(isBlocking)
   const cField = r.verdict === '조건부' ? conditionalField(r.rules, profile) : null
   const dup = p.duplicatePolicy
-  const unknown = r.rules.filter((x) => x.result === 'unknown')
-  const meta = [
-    p.agency,
-    p.amountMaxManwon != null ? `1인 최대 ${won(p.amountMaxManwon)}` : null,
-    p.interestRate ?? null,
-    p.supportDetail ?? null,
-    p.totalBudgetText ? `사업 전체 예산 ${p.totalBudgetText}` : null,
-  ].filter(Boolean)
+  // 수행기관이 있으면 수행기관을 먼저 보여준다
+  const meta = [p.operator ?? p.agency, p.amountMaxManwon != null ? `1인 최대 ${won(p.amountMaxManwon)}` : null].filter(
+    Boolean,
+  )
 
   return (
-    <Card
-      className={cx(
-        'flex flex-col gap-3.5',
-        r.verdict === '자격 충족' && 'border-primary-100 bg-primary-50/40',
-      )}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <VerdictBadge verdict={r.verdict} label={cField ? CONDITIONAL_LABEL[cField] : undefined} />
-        <DayBadge daysLeft={r.daysLeft} />
-        {p.supportTypes.map((t) => (
-          <Badge key={t} tone={t === '융자' ? 'violet' : 'info'}>
-            {t}
-          </Badge>
-        ))}
-        <Badge tone={dup.status === '불가' ? 'warn' : 'neutral'}>중복 지원 {dup.status}</Badge>
-        {p.source === 'mock' && <Badge tone="neutral">샘플</Badge>}
+    // 격자 안 카드. 체크리스트는 이 카드 안에서 펼친다 (높이 제한 + 안쪽 스크롤)
+    <Card padded={false} className="flex flex-col overflow-hidden">
+      {/* 판정 헤더: 판정색 연한 배경 + 글자 라벨 */}
+      <div className={cx('flex min-h-11 items-center gap-2 px-6 text-sm font-bold', VERDICT[r.verdict].head)}>
+        {tabOf(r.verdict).label}
+        {cField && <span className="font-semibold">{CONDITIONAL_SUBLABEL[cField]}</span>}
       </div>
-
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 className="text-[17px] font-bold text-ink">{p.title}</h3>
-          <p className="mt-1 text-[13px] text-muted">{meta.join(' · ')}</p>
+      <div className="flex flex-1 flex-col gap-4 p-6">
+        <div className="flex flex-wrap items-center gap-2">
+          <DayBadge daysLeft={r.daysLeft} />
+          {p.supportTypes.map((t) => (
+            <Badge key={t} tone={t === '융자' ? 'violet' : 'info'}>
+              {t}
+            </Badge>
+          ))}
+          <Badge tone={dup.status === '불가' ? 'warn' : 'neutral'}>중복 지원 {dup.status}</Badge>
         </div>
-        {/* 조건부는 추천이 아니므로 매칭 점수를 보여주지 않는다 */}
-        {r.verdict !== '조건부' && (
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-sm font-bold text-primary-600 tnum">매칭 {r.score}점</span>
-            <DataBadge kind="self" />
-          </div>
+
+        {/* 배지 줄과 공고명 사이를 조금 더 띄운다 */}
+        <div className="mt-1">
+          <h3 className="text-[17px] leading-snug font-bold text-ink">{p.title}</h3>
+          <p className="mt-1.5 text-[13px] text-muted">{meta.join(' · ')}</p>
+        </div>
+
+        {/* 공고마다 같은 판정 문구(headline) 대신 공고 데이터의 사업 요약을 보여준다 */}
+        {p.summary && <p className="text-sm leading-relaxed text-ink-soft">{p.summary}</p>}
+
+        {/* 링크는 카드 맨 아래에 붙여 같은 줄 카드끼리 위치를 맞춘다 */}
+        <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2">
+          <a
+            href={p.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-primary-600"
+          >
+            공고 원문 보기
+            <Icon name="arrow-right" size={14} />
+          </a>
+          <button
+            type="button"
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-muted"
+          >
+            조건 체크리스트
+            <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} />
+          </button>
+        </div>
+
+        {open && (
+          <RuleChecklist rules={r.rules} duplicatePolicy={dup} />
         )}
       </div>
-
-      <p className="text-[15px] font-bold text-ink">{r.headline}</p>
-
-      {failed.length > 0 && (
-        <Section label="맞지 않는 조건" icon="flag" cls="text-warn">
-          {failed.map((x) => (
-            <li key={x.rule.kind + x.reason} className="text-sm leading-relaxed text-ink-soft">
-              {x.reason}
-              <Quote section={x.rule.section}>{x.rule.quote}</Quote>
-            </li>
-          ))}
-        </Section>
-      )}
-
-      {r.reasons.length > 0 && (
-        <Section label="왜 맞나요" icon="check" cls="text-pos">
-          {r.reasons.map((x) => (
-            <li key={x.chunkId + x.text} className="text-sm leading-relaxed text-ink-soft">
-              {x.text}
-              <Quote>{x.quote}</Quote>
-            </li>
-          ))}
-        </Section>
-      )}
-
-      {unknown.length > 0 && (
-        <Section label="확인이 필요해요" icon="info" cls="text-muted">
-          {unknown.map((x) => (
-            <li key={x.rule.kind + x.reason} className="text-sm text-ink-soft">
-              {x.reason}
-              <Quote section={x.rule.section}>{x.rule.quote}</Quote>
-            </li>
-          ))}
-          {p.contact && <li className="text-xs text-muted">문의: {p.contact}</li>}
-        </Section>
-      )}
-
-      {r.cautions.length > 0 && (
-        <Section label="유의사항" icon="flag" cls="text-muted">
-          {r.cautions.map((x) => (
-            <li key={x.chunkId + x.text} className="text-sm leading-relaxed text-ink-soft">
-              {x.text}
-              <Quote>{x.quote}</Quote>
-            </li>
-          ))}
-        </Section>
-      )}
-
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <a
-          href={p.url}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-primary-600"
-        >
-          공고 원문 보기
-          <Icon name="arrow-right" size={14} />
-        </a>
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-muted"
-        >
-          조건 체크리스트
-          <Icon name={open ? 'chevron-down' : 'chevron-right'} size={14} />
-        </button>
-      </div>
-
-      {open && (
-        <RuleChecklist rules={r.rules} profile={profile} duplicatePolicy={dup} exceptions={r.exceptions} />
-      )}
     </Card>
   )
 }

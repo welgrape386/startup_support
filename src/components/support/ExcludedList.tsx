@@ -1,41 +1,22 @@
-import { useState } from 'react'
 import { Card } from '@/components/Card'
-import { Icon } from '@/components/Icon'
 import type { SupportMatchResponse } from '@/services/supportMatch/types'
 import { VerdictBadge } from './MatchCard'
 
-/** 자격 미달로 제외된 공고와 사유 (접힘) */
-export function ExcludedList({
-  items,
-  defaultOpen = false,
-}: {
-  items: SupportMatchResponse['excluded']
-  defaultOpen?: boolean
-}) {
-  const [open, setOpen] = useState(defaultOpen)
-  if (items.length === 0) return null
+/** 자격 미달로 제외된 공고와 사유. "해당 안 됨" 탭 안에서 항상 펼쳐 보여준다 (탭이 접힘 역할) */
+export function ExcludedList({ items }: { items: SupportMatchResponse['excluded'] }) {
   return (
-    <Card padded={false}>
-      <button
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-        className="flex min-h-12 w-full items-center justify-between gap-3 px-6 py-3 text-left text-sm font-semibold text-ink-soft sm:px-7"
-      >
-        자격이 안 맞아 제외된 공고 {items.length}건 {open ? '접기' : '보기'}
-        <Icon name={open ? 'chevron-down' : 'chevron-right'} size={16} />
-      </button>
-      {open && (
-        <ul className="flex flex-col gap-2.5 border-t border-line px-6 py-4 sm:px-7">
-          {items.map((x) => (
-            <li key={x.programId} className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+    <Card>
+      <ul className="flex flex-col divide-y divide-line">
+        {items.map((x) => (
+          <li key={x.programId} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
+            <span className="flex flex-wrap items-center gap-2">
               <VerdictBadge verdict="자격 미달" />
-              <span className="font-semibold text-ink">{x.title}</span>
-              <span className="text-neg">{x.failedReasons.join(' · ')}</span>
-            </li>
-          ))}
-        </ul>
-      )}
+              <span className="text-sm font-semibold text-ink">{x.title}</span>
+            </span>
+            <span className="text-sm text-neg">{x.failedReasons.join(' · ')}</span>
+          </li>
+        ))}
+      </ul>
     </Card>
   )
 }

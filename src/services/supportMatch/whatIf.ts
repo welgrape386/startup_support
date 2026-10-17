@@ -49,5 +49,10 @@ export function nextSteps(programs: SupportProgram[], profile: UserProfile, toda
       }
     }
   }
-  return [...groups.values()].sort((a, b) => b.programIds.length - a.programIds.length).slice(0, NEXT_STEPS_MAX)
+  // 공고 수 내림차순, 동점이면 묶음 안 1인 최대 금액이 큰 쪽. 금액이 없으면 0 으로 본다 (추정하지 않음)
+  const amount = new Map(programs.map((p) => [p.id, p.amountMaxManwon ?? 0]))
+  const maxAmount = (s: NextStep) => Math.max(...s.programIds.map((id) => amount.get(id) ?? 0))
+  return [...groups.values()]
+    .sort((a, b) => b.programIds.length - a.programIds.length || maxAmount(b) - maxAmount(a))
+    .slice(0, NEXT_STEPS_MAX)
 }

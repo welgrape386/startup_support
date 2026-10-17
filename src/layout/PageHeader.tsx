@@ -7,16 +7,16 @@ export type Crumb = { label: string; to?: string }
 
 function Breadcrumb({ items }: { items: Crumb[] }) {
   return (
-    <nav className="flex items-center gap-1.5 text-xs text-faint">
+    <nav className="flex items-center gap-1.5 text-[13px] text-muted">
       {items.map((c, i) => (
         <span key={c.label} className="flex items-center gap-1.5">
           {i > 0 && <Icon name="chevron-right" size={12} />}
           {c.to ? (
-            <Link to={c.to} className="hover:text-muted">
+            <Link to={c.to} className="hover:text-ink">
               {c.label}
             </Link>
           ) : (
-            <span className={cx(i === items.length - 1 && 'text-muted')}>{c.label}</span>
+            <span className={cx(i === items.length - 1 && 'text-ink-soft')}>{c.label}</span>
           )}
         </span>
       ))}

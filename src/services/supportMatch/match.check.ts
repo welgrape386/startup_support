@@ -456,6 +456,15 @@ test('any-4 청년 또는 마포구: 그룹 fail 이 한 걸음(시군구)으로
   eq(verdictOf(p, applyPatch(u, step!.patch)), '자격 충족', '재판정')
 })
 
+test('whatIf 정렬: 공고 수가 같으면 1인 최대 금액이 큰 묶음 먼저, 금액 없으면 0', () => {
+  const gu = (g: string, amountMaxManwon?: number) =>
+    fixture(`gu-${g}`, [{ kind: 'region', sido: ['서울특별시'], sigungu: [g], quote: `${g} 소재` }], { amountMaxManwon })
+  // 입력 순서와 기대 순서를 다르게 둬서, 금액 비교가 없으면 실패하게 한다
+  const pool = [gu('성동구'), gu('마포구', 1000), gu('종로구', 5000)]
+  const u = profile({ age: 29, sido: '서울특별시', sigungu: '강남구' })
+  eq(nextSteps(pool, u, TODAY).map((s) => s.value), ['종로구', '마포구', '성동구'], '순서')
+})
+
 // ── 회의 반영: 중복 지원·예외 조항·요약 구간 ─────────────────────────
 
 test('dup 중복 지원: quote 가 해당 항목 원문에 없으면 미확인, 있으면 그대로', () => {
