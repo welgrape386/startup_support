@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
@@ -10,6 +10,7 @@ import { loadInput, saveInput } from '@/lib/supportMatchInput'
 import { MAX_TEXT_LENGTH, MIN_TEXT_LENGTH } from '@/services/supportMatch/config'
 import { shortSido } from '@/services/supportMatch/eligibility'
 import { inputError } from '@/services/supportMatch/validate'
+import { Analyzing, useSignalAnalysis } from '../../SignalComponents2'
 
 const EXAMPLES = [
   '29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요. 인테리어 자금이 3천만원 정도 모자라요.',
@@ -34,12 +35,20 @@ export function SupportMatch() {
     { label: '업종', value: p.industryCategory.value },
   ]
 
-  const submit = () => {
-    if (!canSubmit) return
-    const req = { text: text.trim() } // 새 문장이면 이전 칩 수정(overrides)은 버린다
+  const complete = useCallback(() => {
+    const req = { text: text.trim() }
     saveInput(req)
     navigate('/support-match/results', { state: req })
+  }, [text, navigate])
+
+  const { running, step, start } = useSignalAnalysis(complete)
+
+  const submit = () => {
+    if (!canSubmit) return
+    start()
   }
+
+  if (running) return <Analyzing step={step} />
 
   return (
     <Container className="flex flex-col gap-6 py-page-y">

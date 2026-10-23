@@ -3,13 +3,14 @@ import { buttonClasses } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Icon, type IconName } from '@/components/Icon'
 import { Container } from '@/layout/Container'
+import { HeroSignal } from '../../SignalComponents2'
 
 // 판정에 쓰는 핵심 항목. 적지 않은 항목은 '확인 필요'로 남는다 (원칙 2)
 const TIPS: { icon: IconName; label: string; body: string }[] = [
   { icon: 'user', label: '나이', body: '만 나이로 적어주세요. 청년 지원은 나이 기준이 많아요.' },
   { icon: 'location', label: '지역', body: '사업장(예정지)의 시·도와 구·군까지 적으면 지역 공고를 가려낼 수 있어요.' },
   { icon: 'building', label: '창업 단계', body: '예비창업자인지, 사업자 등록을 했다면 몇 년 됐는지 알려주세요.' },
-  { icon: 'won', label: '필요한 지원', body: '자금(융자·보조금·보증), 교육·멘토링, 공간 중 무엇이 필요한지 적어주세요.' },
+  { icon: 'won', label: '필요한 지원', body: '자금(융자·보조금·보증), 교육·멘토링, 공간 중 무엇이 필요한지 알려주세요.' },
 ]
 
 const POINTS: { icon: IconName; title: string; body: string }[] = [
@@ -32,8 +33,12 @@ const POINTS: { icon: IconName; title: string; body: string }[] = [
 
 export function Home() {
   return (
-    <Container className="flex flex-col gap-14 py-page-y">
-      <section className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_420px] lg:gap-24">
+    <Container className="flex flex-col gap-10 py-page-y">
+      {/* 히어로: 왼쪽 글 / 오른쪽 신호등만 */}
+      <section
+        className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_480px] lg:gap-16"
+        style={{ paddingTop: '24px', paddingBottom: '8px' }}
+      >
         <div className="flex flex-col gap-6">
           <h1 className="text-[34px] leading-[1.18] font-extrabold tracking-tight text-ink sm:text-[46px]">
             내 상황을 적으면,
@@ -52,38 +57,40 @@ export function Home() {
           </div>
         </div>
 
-        <Card className="flex flex-col gap-4">
-          <h2 className="text-[17px] font-bold text-ink">이렇게 적으면 정확해져요</h2>
-          <ul className="flex flex-col gap-3.5">
-            {TIPS.map((t) => (
-              <li key={t.label} className="flex gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary-50 text-primary-600">
-                  <Icon name={t.icon} size={18} />
-                </span>
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-sm font-semibold text-ink">{t.label}</span>
-                  <span className="text-[13px] leading-relaxed text-muted">{t.body}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <div className="flex flex-col gap-1.5 rounded-panel bg-bg-soft px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
-            <p>
-              <span className="font-semibold text-pos">좋은 예</span> &ldquo;27세, 마포구 거주, 사업자등록 전, 디저트 카페
-              준비 중&rdquo;
-            </p>
-            <p>
-              <span className="font-semibold text-warn">부족한 예</span> &lsquo;창업 지원 알려줘&rsquo; → 확인 필요가 많이
-              나와요
-            </p>
-          </div>
-          <p className="flex items-start gap-1.5 text-[13px] text-muted">
-            <Icon name="info" size={12} className="mt-0.5 shrink-0" />
-            적지 않은 항목은 자격을 단정하지 않고 &lsquo;확인 필요&rsquo;로 표시해요.
-          </p>
-        </Card>
+        <HeroSignal />
       </section>
 
+      {/* 입력 안내: 4칸 그리드 */}
+      <Card className="flex flex-col gap-5" style={{ background: '#f2f6ff', border: '1px solid #dbe5ff' }}>
+        <h2 className="text-[17px] font-bold text-ink">이렇게 적으면 정확해져요</h2>
+        <ul className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {TIPS.map((t) => (
+            <li key={t.label} className="flex flex-col gap-2">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-primary-600" style={{ background: '#e3ebff' }}>
+                <Icon name={t.icon} size={18} />
+              </span>
+              <strong className="block text-sm font-semibold text-ink">{t.label}</strong>
+              <p className="mt-0 text-[13px] text-muted" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>{t.body}</p>
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-col gap-1.5 rounded-panel px-4 py-3 text-[13px] leading-relaxed text-ink-soft" style={{ background: '#fff', border: '1px solid #dbe5ff' }}>
+          <p>
+            <span className="font-semibold text-pos">좋은 예</span>{' '}
+            &ldquo;27세, 마포구 거주, 사업자등록 전, 디저트 카페 준비 중&rdquo;
+          </p>
+          <p>
+            <span className="font-semibold text-warn">부족한 예</span>{' '}
+            &lsquo;창업 지원 알려줘&rsquo; → 확인 필요가 많이 나와요
+          </p>
+        </div>
+        <p className="flex items-start gap-1.5 text-[13px] text-muted">
+          <Icon name="info" size={12} className="mt-0.5 shrink-0" />
+          적지 않은 항목은 자격을 단정하지 않고 &lsquo;확인 필요&rsquo;로 표시해요.
+        </p>
+      </Card>
+
+      {/* 서비스 특징 */}
       <section className="grid gap-8 border-t border-line pt-10 md:grid-cols-3">
         {POINTS.map((p) => (
           <div key={p.title} className="flex flex-col gap-2.5">

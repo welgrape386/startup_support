@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Badge } from '@/components/Badge'
 import { Card } from '@/components/Card'
 import { Icon } from '@/components/Icon'
@@ -45,6 +46,7 @@ export function VerdictBadge({ verdict }: { verdict: MatchVerdict }) {
 
 export function MatchCard({ result: r, profile }: { result: MatchResult; profile: UserProfile }) {
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
   const p = r.program
   const cField = r.verdict === '조건부' ? conditionalField(r.rules, profile) : null
   const dup = p.duplicatePolicy
@@ -53,9 +55,18 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
     Boolean,
   )
 
+  const goDetail = () => navigate(`/support-match/${p.id}`, { state: { result: r } })
+
   return (
     // 격자 안 카드. 체크리스트는 이 카드 안에서 펼친다 (높이 제한 + 안쪽 스크롤)
-    <Card padded={false} className="flex flex-col overflow-hidden">
+    <Card
+      padded={false}
+      className="flex flex-col overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+      role="link"
+      tabIndex={0}
+      onClick={goDetail}
+      onKeyDown={(e) => { if (e.key === 'Enter') goDetail() }}
+    >
       {/* 판정 헤더: 판정색 연한 배경 + 글자 라벨 */}
       <div className={cx('flex min-h-11 items-center gap-2 px-6 text-sm font-bold', VERDICT[r.verdict].head)}>
         {tabOf(r.verdict).label}
@@ -86,8 +97,9 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
           <a
             href={p.url}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-primary-600"
+            onClick={(e) => e.stopPropagation()}
           >
             공고 원문 보기
             <Icon name="arrow-right" size={14} />
@@ -95,7 +107,7 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
           <button
             type="button"
             aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
+            onClick={(e) => { e.stopPropagation(); setOpen((v) => !v) }}
             className="inline-flex min-h-10 items-center gap-1 text-sm font-semibold text-muted"
           >
             조건 체크리스트

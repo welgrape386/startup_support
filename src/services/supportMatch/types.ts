@@ -57,6 +57,16 @@ export type SupportProgram = {
   summary: string
   url: string
   contact?: string
+  /** 신청 사이트 URL (기업마당 외 별도 신청 페이지가 있을 때) */
+  applyUrl?: string                       // TODO: API 필드
+  /** 제출 서류 목록 */
+  submissionDocs?: string[]               // TODO: API 필드
+  /** 우대·가산점 항목 */
+  bonusPoints?: string[]                  // TODO: API 필드
+  /** 첨부 파일 (공고 원문 PDF/HWP 등) */
+  attachmentFiles?: { name: string; url: string }[]  // TODO: API 필드
+  /** 차수형 모집 일정 */
+  rounds?: { round: string; start: string; end: string; status: '접수중' | '마감' | '예정' }[]  // TODO: API 필드
   /** 포털 원문 항목 그대로 (quote 검증 대상) */
   fields: Record<string, string>
   fetchedAt: string

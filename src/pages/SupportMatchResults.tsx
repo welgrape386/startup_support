@@ -7,15 +7,13 @@ import { Icon } from '@/components/Icon'
 import { ExcludedList } from '@/components/support/ExcludedList'
 import { MatchCard } from '@/components/support/MatchCard'
 import { ProfileChips } from '@/components/support/ProfileChips'
-import { defaultTab, VERDICT_TABS, type VerdictTab, VerdictTabs } from '@/components/support/VerdictTabs'
 import { cx } from '@/lib/cx'
 import { Container } from '@/layout/Container'
 import { PageHeader } from '@/layout/PageHeader'
 import { fetchSupportMatch, SupportMatchApiError } from '@/services/supportMatch/client'
-import type { SupportMatchRequest, SupportMatchResponse, UserProfile } from '@/services/supportMatch/types'
+import type { MatchResult, SupportMatchRequest, SupportMatchResponse, UserProfile } from '@/services/supportMatch/types'
 import { loadInput, saveInput } from '@/lib/supportMatchInput'
-
-const LOADING_STEPS = ['조건 분석 중', '공고 검색 중', '자격 판정 중', '근거 검증 중']
+import { Analyzing, SignalLight, SignalSummaryBar, type Verdict } from '../../SignalComponents2'
 
 type Filter = 'all' | 'money' | 'edu' | 'space'
 type Sort = 'recommend' | 'deadline'
@@ -27,7 +25,7 @@ const FILTERS: { key: Filter; label: string; types: string[] }[] = [
   { key: 'space', label: '공간', types: ['공간'] },
 ]
 
-// 필터·정렬 선택은 남색(ink). 판정색(초록·주황·빨강)·브랜드 파랑과 선택 상태가 섞이지 않게 한다
+// 필터·정렬 선택은 남색(ink). 판정색·브랜드 파랑과 선택 상태가 섞이지 않게 한다
 const tabCls = (active: boolean) =>
   cx(
     'min-h-10 rounded-chip px-3 text-[13px] font-semibold transition-colors',
@@ -35,15 +33,19 @@ const tabCls = (active: boolean) =>
   )
 const groupLabel = 'mr-1 text-[13px] font-semibold text-muted'
 
-function SkeletonCard() {
-  return (
-    <Card className="flex animate-pulse flex-col gap-3" aria-hidden="true">
-      <div className="h-5 w-40 rounded-chip bg-bg-soft" />
-      <div className="h-6 w-2/3 rounded-chip bg-bg-soft" />
-      <div className="h-4 w-1/2 rounded-chip bg-bg-soft" />
-      <div className="h-16 w-full rounded-panel bg-bg-soft" />
-    </Card>
-  )
+// green → yellow → unknown → red 순서
+const SIGNAL_GROUPS: { signal: Verdict; label: string }[] = [
+  { signal: 'green', label: '지금 신청 가능' },
+  { signal: 'yellow', label: '조건부 가능' },
+  { signal: 'unknown', label: '확인 필요' },
+  { signal: 'red', label: '해당 안 됨' },
+]
+
+const RAIL_LABEL_COLOR: Record<Verdict, string> = {
+  green: 'var(--green-text)',
+  yellow: 'var(--yellow-text)',
+  unknown: 'var(--body)',
+  red: 'var(--red-text)',
 }
 
 /** /support-match/results — 입력 화면에서 저장한 문장으로 판정 결과를 보여준다 */
@@ -58,9 +60,7 @@ export function SupportMatchResults() {
   const [error, setError] = useState<{ code: string; message: string } | null>(null)
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<Sort>('recommend')
-  // null = 기본 탭. 새 문장은 이 화면을 새로 열므로 null 로 시작하고, 칩 수정 때는 지금 탭을 고정한다
-  const [tab, setTab] = useState<VerdictTab | null>(null)
-  // null = 기본값(핵심 4항목 중 빈 게 있으면 펼침). 한 번 정해지면 칩 수정으로 재요청해도 유지한다
+  const [signalFilter, setSignalFilter] = useState<Verdict | 'all'>('all')
   const [chipsOpen, setChipsOpen] = useState<boolean | null>(null)
 
   // 입력(문장·칩 수정)이 바뀔 때마다 다시 요청. 늦게 도착한 이전 응답은 버린다
@@ -69,6 +69,7 @@ export function SupportMatchResults() {
     let alive = true
     setStatus('loading')
     setError(null)
+    setSignalFilter('all')
     fetchSupportMatch(req).then(
       (data) => {
         if (!alive) return
@@ -87,44 +88,47 @@ export function SupportMatchResults() {
     }
   }, [req])
 
-  // 로딩 단계 문구 (실제 서버 단계와 무관한 표시용 타이머)
+  // 로딩 단계 (표시용 타이머)
   useEffect(() => {
     if (status !== 'loading') return
     setStep(0)
-    const id = window.setInterval(() => setStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1)), 900)
+    const id = window.setInterval(() => setStep((s) => Math.min(s + 1, 3)), 900)
     return () => window.clearInterval(id)
   }, [status])
 
-  const counts: Record<VerdictTab, number> | null = res && {
-    eligible: res.results.filter((r) => r.verdict === '자격 충족').length,
-    conditional: res.conditional.length,
-    check: res.results.filter((r) => r.verdict === '확인 필요').length,
-    excluded: res.excluded.length,
-  }
-  const active = tab ?? (counts ? defaultTab(counts) : 'eligible')
+  // 신호등 4가지 건수: green=자격충족 / yellow=조건부 / unknown=확인필요 / red=해당안됨
+  const signalCounts = res ? {
+    green: res.results.filter((r) => r.verdict === '자격 충족').length,
+    yellow: res.conditional.length,
+    unknown: res.results.filter((r) => r.verdict === '확인 필요').length,
+    red: res.excluded.length,
+  } : null
 
-  // 필터·정렬은 선택한 탭 안에서만. 해당 안 됨 탭은 유형 정보가 없어 적용하지 않는다
-  const visible = useMemo(() => {
-    if (!res || active === 'excluded') return []
-    const base =
-      active === 'conditional'
-        ? res.conditional
-        : res.results.filter((r) => r.verdict === (active === 'eligible' ? '자격 충족' : '확인 필요'))
+  // 그룹별 필터·정렬 적용 결과 (red는 excluded 그대로)
+  const groupedItems = useMemo(() => {
+    if (!res) return null
     const types = FILTERS.find((f) => f.key === filter)!.types
-    const list = base.filter(
-      (r) => types.length === 0 || r.program.supportTypes.some((t) => types.includes(t)),
-    )
-    if (sort === 'deadline')
-      return [...list].sort((a, b) => (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity))
-    return list
-  }, [res, active, filter, sort])
+    const applyFS = (items: MatchResult[]) => {
+      const list = items.filter(
+        (r) => types.length === 0 || r.program.supportTypes.some((t) => types.includes(t)),
+      )
+      return sort === 'deadline'
+        ? [...list].sort((a, b) => (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity))
+        : list
+    }
+    return {
+      green: applyFS(res.results.filter((r) => r.verdict === '자격 충족')),
+      yellow: applyFS(res.conditional),
+      unknown: applyFS(res.results.filter((r) => r.verdict === '확인 필요')),
+      red: res.excluded,
+    }
+  }, [res, filter, sort])
 
   if (!req) return <Navigate to="/support-match" replace />
 
   const onOverride = (key: keyof UserProfile, value: unknown) => {
     const next = { ...req, overrides: { ...req.overrides, [key]: value } }
-    saveInput(next) // 새로고침해도 수정한 칩이 유지되도록
-    setTab(active)
+    saveInput(next)
     setChipsOpen(chipsExpanded)
     setReq(next)
   }
@@ -135,6 +139,9 @@ export function SupportMatchResults() {
   const ageUnknownCount =
     res?.results.filter((r) => r.rules.some((x) => x.rule.kind === 'age' && x.result === 'unknown'))
       .length ?? 0
+
+  const totalCount =
+    (res?.results.length ?? 0) + (res?.conditional.length ?? 0) + (res?.excluded.length ?? 0)
 
   return (
     <Container className="flex flex-col gap-6 py-page-y">
@@ -149,19 +156,7 @@ export function SupportMatchResults() {
       />
 
       <div className="flex flex-col gap-6" aria-live="polite">
-        {status === 'loading' && (
-          <>
-            <p className="text-sm text-muted">
-              {LOADING_STEPS.map((s, i) => (i <= step ? s : null))
-                .filter(Boolean)
-                .join(' → ')}
-              …
-            </p>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        )}
+        {status === 'loading' && <Analyzing step={Math.min(step, 2)} />}
 
         {status === 'error' && error && (
           <Card className="flex flex-col items-start gap-3">
@@ -187,16 +182,23 @@ export function SupportMatchResults() {
               />
             </div>
 
-            {/* 모집 중 공고 자체가 0건일 때만 (요약 구간의 합 = 모집 중 공고 수) */}
-            {res.results.length + res.conditional.length + res.excluded.length === 0 ? (
+            {/* 모집 중 공고 자체가 0건일 때만 */}
+            {totalCount === 0 ? (
               <Card className="flex flex-col gap-3">
                 <p className="text-[15px] font-bold text-ink">조건에 맞는 모집 중 공고가 없어요</p>
                 <p className="text-sm text-muted">지역이나 창업 단계 조건을 바꿔서 다시 찾아보세요.</p>
               </Card>
             ) : (
               <>
-                {/* 0건: 자격 충족·조건부가 모두 없으면 기본 탭이 확인 필요(없으면 해당 안 됨)로 열린다 */}
-                {counts!.eligible + counts!.conditional === 0 && (
+                {/* 신호등 요약 바 (4칸: green→yellow→unknown→red) */}
+                <SignalSummaryBar
+                  counts={signalCounts!}
+                  activeFilter={signalFilter}
+                  setActiveFilter={setSignalFilter}
+                />
+
+                {/* 자격 충족·조건부 가능이 모두 0건일 때 안내 */}
+                {signalCounts && signalCounts.green + signalCounts.yellow === 0 && (
                   <div
                     role="status"
                     className="flex items-start gap-2 rounded-panel bg-info-soft px-4 py-3 text-sm text-ink-soft"
@@ -221,75 +223,94 @@ export function SupportMatchResults() {
                     </span>
                   </div>
                 )}
-                <VerdictTabs counts={counts!} active={active} onChange={setTab}>
-                  {counts![active] === 0 ? (
-                    <Card>
-                      <p className="text-sm text-muted">{VERDICT_TABS.find((t) => t.key === active)!.empty}</p>
-                    </Card>
-                  ) : active === 'excluded' ? (
-                    <ExcludedList items={res.excluded} />
-                  ) : (
-                    <>
-                      {/* 판정별 큰 상자: 위에 유형 필터·정렬, 안에 공고 카드 격자 (모바일 1열) */}
-                      <Card className="flex flex-col gap-5">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="지원 유형">
-                            <span aria-hidden="true" className={groupLabel}>
-                              유형
-                            </span>
-                            {FILTERS.map((f) => (
-                              <button
-                                key={f.key}
-                                type="button"
-                                aria-pressed={filter === f.key}
-                                onClick={() => setFilter(f.key)}
-                                className={tabCls(filter === f.key)}
-                              >
-                                {f.label}
-                              </button>
-                            ))}
-                          </div>
-                          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="정렬">
-                            <span aria-hidden="true" className={groupLabel}>
-                              정렬
-                            </span>
-                            <button
-                              type="button"
-                              aria-pressed={sort === 'recommend'}
-                              onClick={() => setSort('recommend')}
-                              className={tabCls(sort === 'recommend')}
-                            >
-                              추천순
-                            </button>
-                            <button
-                              type="button"
-                              aria-pressed={sort === 'deadline'}
-                              onClick={() => setSort('deadline')}
-                              className={tabCls(sort === 'deadline')}
-                            >
-                              마감 임박순
-                            </button>
+
+                {/* 유형·정렬 필터 바 */}
+                <Card className="flex flex-wrap items-center justify-between gap-3 py-3">
+                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="지원 유형">
+                    <span aria-hidden="true" className={groupLabel}>유형</span>
+                    {FILTERS.map((f) => (
+                      <button
+                        key={f.key}
+                        type="button"
+                        aria-pressed={filter === f.key}
+                        onClick={() => setFilter(f.key)}
+                        className={tabCls(filter === f.key)}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="정렬">
+                    <span aria-hidden="true" className={groupLabel}>정렬</span>
+                    <button
+                      type="button"
+                      aria-pressed={sort === 'recommend'}
+                      onClick={() => setSort('recommend')}
+                      className={tabCls(sort === 'recommend')}
+                    >
+                      추천순
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={sort === 'deadline'}
+                      onClick={() => setSort('deadline')}
+                      className={tabCls(sort === 'deadline')}
+                    >
+                      마감 임박순
+                    </button>
+                  </div>
+                </Card>
+
+                {/* 신호등 그룹별 카드 */}
+                <div className="flex flex-col gap-9">
+                  {SIGNAL_GROUPS.map(({ signal, label }) => {
+                    const count = signalCounts![signal]
+                    if (count === 0) return null
+                    if (signalFilter !== 'all' && signalFilter !== signal) return null
+
+                    const isRed = signal === 'red'
+                    const matchItems = isRed
+                      ? []
+                      : (groupedItems![signal as Exclude<Verdict, 'red'>] as MatchResult[])
+
+                    return (
+                      <div key={signal} className={`signal-group signal-group--${signal}`}>
+                        {/* 왼쪽 레일: 신호등 + 이름 + 건수 */}
+                        <div className="signal-group__rail">
+                          <div className="signal-group__rail-inner">
+                            <SignalLight size="card" verdict={signal} />
+                            <p className="text-center text-xs font-semibold" style={{ color: RAIL_LABEL_COLOR[signal] }}>{label}</p>
+                            <p className="text-center text-xs text-muted">{count}건</p>
                           </div>
                         </div>
-                        {/* 나이 unknown 은 확인 필요 판정에서만 생긴다 */}
-                        {active === 'check' && ageUnknownCount > 0 && (
-                          <p className="text-[13px] text-warn">
-                            나이를 알려주시면 {ageUnknownCount}건을 더 정확히 판정할 수 있어요.
-                          </p>
-                        )}
-                        {visible.length === 0 ? (
-                          <p className="text-sm text-muted">이 유형에 해당하는 공고가 없어요. 다른 유형을 확인해보세요.</p>
-                        ) : (
-                          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                            {visible.map((r) => (
-                              <MatchCard key={r.program.id} result={r} profile={res.profile} />
-                            ))}
-                          </div>
-                        )}
-                      </Card>
-                    </>
-                  )}
-                </VerdictTabs>
+
+                        {/* 오른쪽 패널: 카드 그리드 */}
+                        <div className="signal-group__panel">
+                          {isRed ? (
+                            <ExcludedList items={res.excluded} />
+                          ) : (
+                            <>
+                              {signal === 'unknown' && ageUnknownCount > 0 && (
+                                <p className="mb-3 text-[13px] text-warn">
+                                  나이를 알려주시면 {ageUnknownCount}건을 더 정확히 판정할 수 있어요.
+                                </p>
+                              )}
+                              {matchItems.length === 0 ? (
+                                <p className="text-sm text-muted">이 유형에 해당하는 공고가 없어요. 다른 유형을 확인해보세요.</p>
+                              ) : (
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                  {matchItems.map((r) => (
+                                    <MatchCard key={r.program.id} result={r} profile={res.profile} />
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </>
             )}
 
