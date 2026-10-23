@@ -354,14 +354,14 @@ export function SupportMatchDetail() {
                     ) : isImage(file.url) ? (
                       <>
                         <img src={file.url} alt={file.name} className="max-h-48 w-auto rounded-panel border border-line object-contain" />
-                        <a href={file.url} download className={buttonClasses('secondary', 'sm')}>다운로드</a>
+                        <a href={file.url} download className={buttonClasses('secondary', 'md')}>다운로드</a>
                       </>
                     ) : isDoc(file.url) ? (
-                      <a href={file.url} download className={buttonClasses('secondary', 'sm')}>
+                      <a href={file.url} download className={buttonClasses('secondary', 'md')}>
                         다운로드 ({fileExt(file.url).toUpperCase()})
                       </a>
                     ) : (
-                      <a href={file.url} target="_blank" rel="noopener noreferrer" className={buttonClasses('secondary', 'sm')}>열기</a>
+                      <a href={file.url} target="_blank" rel="noopener noreferrer" className={buttonClasses('secondary', 'md')}>열기</a>
                     )}
                   </div>
                 ))}
