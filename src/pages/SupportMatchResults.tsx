@@ -25,8 +25,8 @@ import { Analyzing, SignalLight, SignalSummaryBar, type Verdict } from '../../Si
 
 type Sort = 'recommend' | 'deadline'
 
-// 결과 화면 상단 배치 순서: AI 요약 → 이렇게 이해했어요. 순서는 여기서만 바꾼다
-const TOP_ORDER = ['summary', 'profile'] as const
+// 결과 화면 상단 배치 순서: 이렇게 이해했어요 → AI 요약. 순서는 여기서만 바꾼다
+const TOP_ORDER = ['profile', 'summary'] as const
 
 // 필터·정렬 선택은 남색(ink). 판정색·브랜드 파랑과 선택 상태가 섞이지 않게 한다
 const tabCls = (active: boolean) =>
