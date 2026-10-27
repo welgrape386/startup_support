@@ -7,23 +7,26 @@ import { Icon } from '@/components/Icon'
 import { ExcludedList } from '@/components/support/ExcludedList'
 import { MatchCard } from '@/components/support/MatchCard'
 import { ProfileChips } from '@/components/support/ProfileChips'
+import { ResultSummary } from '@/components/support/ResultSummary'
 import { cx } from '@/lib/cx'
 import { Container } from '@/layout/Container'
 import { PageHeader } from '@/layout/PageHeader'
-import { fetchSupportMatch, SupportMatchApiError } from '@/services/supportMatch/client'
-import type { MatchResult, SupportMatchRequest, SupportMatchResponse, UserProfile } from '@/services/supportMatch/types'
+import { fetchResultSummary, fetchSupportMatch, SupportMatchApiError } from '@/services/supportMatch/client'
+import {
+  CATEGORIES,
+  type Category,
+  type MatchResult,
+  type SupportMatchRequest,
+  type SupportMatchResponse,
+  type UserProfile,
+} from '@/services/supportMatch/types'
 import { loadInput, saveInput } from '@/lib/supportMatchInput'
 import { Analyzing, SignalLight, SignalSummaryBar, type Verdict } from '../../SignalComponents2'
 
-type Filter = 'all' | 'money' | 'edu' | 'space'
 type Sort = 'recommend' | 'deadline'
 
-const FILTERS: { key: Filter; label: string; types: string[] }[] = [
-  { key: 'all', label: '전체', types: [] },
-  { key: 'money', label: '자금', types: ['융자', '보조금', '사업화'] },
-  { key: 'edu', label: '교육·멘토링', types: ['교육', '멘토링'] },
-  { key: 'space', label: '공간', types: ['공간'] },
-]
+// 결과 화면 상단 배치 순서: AI 요약 → 이렇게 이해했어요. 순서는 여기서만 바꾼다
+const TOP_ORDER = ['summary', 'profile'] as const
 
 // 필터·정렬 선택은 남색(ink). 판정색·브랜드 파랑과 선택 상태가 섞이지 않게 한다
 const tabCls = (active: boolean) =>
@@ -58,10 +61,11 @@ export function SupportMatchResults() {
   const [step, setStep] = useState(0)
   const [res, setRes] = useState<SupportMatchResponse | null>(null)
   const [error, setError] = useState<{ code: string; message: string } | null>(null)
-  const [filter, setFilter] = useState<Filter>('all')
+  // 비어 있으면 전체. 여러 개 고르면 하나라도 붙은 공고를 보여준다(OR)
+  const [categories, setCategories] = useState<Category[]>([])
+  const [aiSummary, setAiSummary] = useState<Awaited<ReturnType<typeof fetchResultSummary>> | null>(null)
   const [sort, setSort] = useState<Sort>('recommend')
   const [signalFilter, setSignalFilter] = useState<Verdict | 'all'>('all')
-  const [chipsOpen, setChipsOpen] = useState<boolean | null>(null)
 
   // 입력(문장·칩 수정)이 바뀔 때마다 다시 요청. 늦게 도착한 이전 응답은 버린다
   useEffect(() => {
@@ -88,6 +92,20 @@ export function SupportMatchResults() {
     }
   }, [req])
 
+  // 결과가 바뀌면 3줄 요약도 다시 받는다. 실패하면 요약 상자만 숨긴다
+  useEffect(() => {
+    setAiSummary(null)
+    if (!res) return
+    let alive = true
+    fetchResultSummary(res).then(
+      (s) => alive && setAiSummary(s),
+      () => {},
+    )
+    return () => {
+      alive = false
+    }
+  }, [res])
+
   // 로딩 단계 (표시용 타이머)
   useEffect(() => {
     if (status !== 'loading') return
@@ -107,10 +125,9 @@ export function SupportMatchResults() {
   // 그룹별 필터·정렬 적용 결과 (red는 excluded 그대로)
   const groupedItems = useMemo(() => {
     if (!res) return null
-    const types = FILTERS.find((f) => f.key === filter)!.types
     const applyFS = (items: MatchResult[]) => {
       const list = items.filter(
-        (r) => types.length === 0 || r.program.supportTypes.some((t) => types.includes(t)),
+        (r) => categories.length === 0 || (r.program.support_types ?? []).some((t) => categories.includes(t)),
       )
       return sort === 'deadline'
         ? [...list].sort((a, b) => (a.daysLeft ?? Infinity) - (b.daysLeft ?? Infinity))
@@ -122,19 +139,18 @@ export function SupportMatchResults() {
       unknown: applyFS(res.results.filter((r) => r.verdict === '확인 필요')),
       red: res.excluded,
     }
-  }, [res, filter, sort])
+  }, [res, categories, sort])
+
+  const toggleCategory = (c: Category) =>
+    setCategories((cur) => (cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]))
 
   if (!req) return <Navigate to="/support-match" replace />
 
-  const onOverride = (key: keyof UserProfile, value: unknown) => {
-    const next = { ...req, overrides: { ...req.overrides, [key]: value } }
+  const onOverride = (patch: Partial<Record<keyof UserProfile, unknown>>) => {
+    const next = { ...req, overrides: { ...req.overrides, ...patch } }
     saveInput(next)
-    setChipsOpen(chipsExpanded)
     setReq(next)
   }
-
-  const CORE: (keyof UserProfile)[] = ['age', 'sido', 'bizStage', 'industryCategory']
-  const chipsExpanded = chipsOpen ?? (res ? res.missing.some((k) => CORE.includes(k)) : false)
 
   const ageUnknownCount =
     res?.results.filter((r) => r.rules.some((x) => x.rule.kind === 'age' && x.result === 'unknown'))
@@ -171,15 +187,23 @@ export function SupportMatchResults() {
         {status === 'success' && res && (
           <>
             {/* 샘플 데이터 표시(띠·카드 배지)는 사용자 결정으로 임시 생략 (원칙 4 예외, CLAUDE.md 현재 상태 참고) */}
-            <div id="profile-chips" className="scroll-mt-6">
-              <ProfileChips
-                text={req.text}
-                profile={res.profile}
-                missing={res.missing}
-                open={chipsExpanded}
-                onToggle={() => setChipsOpen(!chipsExpanded)}
-                onOverride={onOverride}
-              />
+            {/* 상단 카드 두 개는 16px 간격으로 묶는다 */}
+            <div className="flex flex-col gap-4">
+              {TOP_ORDER.map((k) =>
+                k === 'summary' ? (
+                  // 결과 전체 AI 3줄 요약 (공고가 0건이면 숨김)
+                  totalCount > 0 && aiSummary && <ResultSummary key={k} lines={aiSummary.lines} />
+                ) : (
+                  <div key={k} id="profile-chips" className="scroll-mt-6">
+                    <ProfileChips
+                      text={req.text}
+                      profile={res.profile}
+                      missing={res.missing}
+                      onOverride={onOverride}
+                    />
+                  </div>
+                ),
+              )}
             </div>
 
             {/* 모집 중 공고 자체가 0건일 때만 */}
@@ -207,14 +231,11 @@ export function SupportMatchResults() {
                     <span className="flex flex-col items-start gap-1">
                       <span>
                         <span className="font-semibold text-ink">조건을 수정해보세요.</span> 지금 신청 가능한 공고가 없어요.
-                        위 &lsquo;이렇게 이해했어요&rsquo;의 칩을 눌러 나이·지역·창업 단계를 고치면 다시 판정해요.
+                        위 &lsquo;이렇게 이해했어요&rsquo;의 칩을 눌러 나이·지역·창업 단계를 고치고 저장하면 다시 판정해요.
                       </span>
                       <button
                         type="button"
-                        onClick={() => {
-                          setChipsOpen(true)
-                          document.getElementById('profile-chips')?.scrollIntoView({ behavior: 'smooth' })
-                        }}
+                        onClick={() => document.getElementById('profile-chips')?.scrollIntoView({ behavior: 'smooth' })}
                         className="inline-flex min-h-10 items-center gap-1 font-semibold text-primary-600"
                       >
                         조건 수정하러 가기
@@ -226,17 +247,26 @@ export function SupportMatchResults() {
 
                 {/* 유형·정렬 필터 바 */}
                 <Card className="flex flex-wrap items-center justify-between gap-3 py-3">
-                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="지원 유형">
-                    <span aria-hidden="true" className={groupLabel}>유형</span>
-                    {FILTERS.map((f) => (
+                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="카테고리 (여러 개 선택 가능)">
+                    <span aria-hidden="true" className={groupLabel}>카테고리</span>
+                    <button
+                      type="button"
+                      aria-pressed={categories.length === 0}
+                      onClick={() => setCategories([])}
+                      className={tabCls(categories.length === 0)}
+                    >
+                      전체
+                    </button>
+                    {/* 0건인 카테고리도 숨기지 않는다 */}
+                    {CATEGORIES.map((c) => (
                       <button
-                        key={f.key}
+                        key={c}
                         type="button"
-                        aria-pressed={filter === f.key}
-                        onClick={() => setFilter(f.key)}
-                        className={tabCls(filter === f.key)}
+                        aria-pressed={categories.includes(c)}
+                        onClick={() => toggleCategory(c)}
+                        className={tabCls(categories.includes(c))}
                       >
-                        {f.label}
+                        {c}
                       </button>
                     ))}
                   </div>
@@ -296,7 +326,7 @@ export function SupportMatchResults() {
                                 </p>
                               )}
                               {matchItems.length === 0 ? (
-                                <p className="text-sm text-muted">이 유형에 해당하는 공고가 없어요. 다른 유형을 확인해보세요.</p>
+                                <p className="text-sm text-muted">이 카테고리에 해당하는 공고가 없어요. 다른 카테고리를 확인해보세요.</p>
                               ) : (
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                   {matchItems.map((r) => (

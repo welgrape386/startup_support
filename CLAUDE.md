@@ -16,7 +16,7 @@ Vite + React 19 + TypeScript + Tailwind v4 + react-router-dom 7. 서버 함수�
 1. AI는 숫자와 사실을 만들지 않는다. 금액·나이·마감일·자격 조건은 공고 데이터에서만 온다. LLM은 해석·설명만.
 2. 모르면 단정하지 않는다 (`unknown` → "확인 필요").
 3. 자체 지표(매칭 점수)에는 `DataBadge kind="self"`.
-4. mock·placeholder 데이터를 화면에 쓰면 "샘플 데이터" 라벨 필수. (**임시 예외 2026-10-17:** 결과 화면의 샘플 띠·카드 배지를 사용자 결정으로 뺐다. 발표·배포 전에 되살린다)
+4. mock·placeholder 데이터를 화면에 쓰면 "샘플 데이터" 라벨 필수. (**임시 예외 2026-10-17:** 결과 화면의 샘플 띠·카드 배지·AI 3줄 요약의 샘플 배지를 사용자 결정으로 뺐다(요약의 `source:'mock'`은 데이터에 유지). 발표·배포 전에 되살린다)
 5. 생성된 설명은 원문과 대조(인용문·숫자) 후 노출. 실패 문장은 제거.
 6. **자격 판정은 규칙(코드)이 한다. LLM이 자격을 판정하게 만들지 않는다.**
 
@@ -48,3 +48,4 @@ Vite + React 19 + TypeScript + Tailwind v4 + react-router-dom 7. 서버 함수�
 - **보류:** Phase 2(LLM 규칙 추출)·Phase 3(API 연동) — 당분간 `ANTHROPIC_API_KEY`를 쓰지 않는다. `scripts/extract-rules.ts`, `data/eval/rule-gold.json`, `@anthropic-ai/sdk`는 나중에 쓰므로 지우지 않는다.
 - Phase 4(키 없이 먼저): `/support-match`에 A(신호등)·B(`RuleChecklist`)·C(`NextSteps`) 반영. 데이터는 `uiPlaceholder.ts`가 mock + 실제 규칙 코드(partition·score·whatIf)로 만든다. 조건부는 `results`가 아니라 C 영역에만.
 - 2026-10-17 결과 화면 개편 (SPEC 6-1, 8-2): 신호등 탭(`VerdictTabs`, 세그먼트형·데스크톱 sticky), 0건 안내("조건을 수정해보세요"), "이렇게 이해했어요" 접기, 카드 격자, 신호색 토큰 조정. 3줄 요약·"한 걸음만 더" 박스·매칭 점수·간이 해석 배지·초안 버튼 화면에서 삭제(계산 코드는 유지). 체크리스트는 판정 한 줄만(내 값·인용·예외 조항 화면에서 뺌). 화면 확인용 가상 공고 11건은 `uiPlaceholder.ts`에만. whatIf 동점 정렬(금액) + 테스트. 남은 것: 샘플 표시 복구(배포 전)
+- 2026-10-27: 결과 화면 카테고리 필터 9종(`support_types`, 다중 선택 OR, 0건도 버튼 유지)과 결과 전체 AI 3줄 요약(`ResultSummary`) 재도입. 요약은 `client.fetchResultSummary`가 목 문장을 주고(`source:'mock'` → "샘플 데이터" 배지), API 연결 시 이 함수만 바꾼다. 숫자 검증 `verifiedSummaryLines`는 유지. 상단 배치는 `SupportMatchResults.tsx`의 `TOP_ORDER` 한 곳(AI 요약 → 이렇게 이해했어요). 요약은 색·카드 없이 텍스트 + 아래 구분선. 지역 칩에서 시군구도 고친다(`src/lib/regions.ts`, 인천 2026-07 개편 반영). 상세 페이지 자격 조건 아래 "공고 사이트 바로가기" 삭제(사이드 카드에는 남김)

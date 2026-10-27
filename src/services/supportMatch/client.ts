@@ -1,5 +1,6 @@
 import type { SupportMatchError, SupportMatchRequest, SupportMatchResponse } from './types'
-import { buildUiPlaceholder } from './uiPlaceholder'
+import { verifiedSummaryLines } from './summary'
+import { buildUiPlaceholder, mockSummaryLines } from './uiPlaceholder'
 import { inputError } from './validate'
 
 export class SupportMatchApiError extends Error {
@@ -60,4 +61,13 @@ export async function fetchSupportMatch(req: SupportMatchRequest): Promise<Suppo
   }
   if (!isMatchResponse(body)) throw new SupportMatchApiError('INTERNAL', '결과를 읽지 못했어요. 잠시 후 다시 시도해주세요.')
   return body
+}
+
+/**
+ * 진단 결과 전체에 대한 AI 3줄 요약 (공고별 요약 아님).
+ * API 가 생기기 전까지는 판정 결과로 만든 샘플 문장을 돌려준다(source='mock' → 화면에 "샘플" 표시).
+ * API 연결 시 lines 를 가져오는 부분만 바꾸고, 숫자 검증(verifiedSummaryLines)은 그대로 둔다.
+ */
+export async function fetchResultSummary(res: SupportMatchResponse): Promise<{ lines: string[]; source: 'ai' | 'mock' }> {
+  return { lines: verifiedSummaryLines(mockSummaryLines(res), res), source: 'mock' }
 }

@@ -14,6 +14,9 @@ import type {
   TargetGroup,
   UserProfile,
 } from './types'
+import { ruleProfile } from '@/lib/parse'
+import { verifiedSummaryLines } from './summary'
+import { buildUiPlaceholder, mockSummaryLines } from './uiPlaceholder'
 import { inputError, validateMatch } from './validate'
 import { applyPatch, nextSteps } from './whatIf'
 
@@ -492,6 +495,23 @@ test('요약: 충족·확인 필요·개업 후·소재지·미달 구간이 겹
     eq(new Set(ids).size, ids.length, '공고 중복')
     eq(ids.length, POOL.length, '합계')
   }
+})
+
+test('3줄 요약: 판정 결과에 없는 숫자가 든 문장은 버리고 최대 3줄', () => {
+  const res = buildUiPlaceholder('인천 사는 29살 예비창업자 소상공인이에요', undefined)
+  const lines = mockSummaryLines(res)
+  eq(verifiedSummaryLines(lines, res), lines.slice(0, 3), '샘플 문장은 전부 통과')
+  const fake = `지금 신청 가능한 공고는 ${res.results.length + 100}건이에요.`
+  eq(verifiedSummaryLines([fake, ...lines], res), lines.slice(0, 3), '지어낸 건수는 제거')
+  eq(verifiedSummaryLines(['최대 9억 9천만원을 받을 수 있어요.'], res), [], '지어낸 금액은 제거')
+})
+
+test('지역 칩: 시군구를 같이 고치면 그 값, 시도만 고치면 문장 속 시군구는 비움', () => {
+  const text = '서울 마포구에서 카페 준비 중'
+  eq(ruleProfile(text, undefined).sigungu.value, '마포구', '문장')
+  eq(ruleProfile(text, { sido: '인천광역시', sigungu: '검단구' }).sigungu.value, '검단구', '시군구 수정')
+  eq(ruleProfile(text, { sido: '인천광역시', sigungu: null }).sigungu.value, null, '시군구 전체')
+  eq(ruleProfile(text, { sido: '인천광역시' }).sigungu.value, null, '시도만 수정')
 })
 
 if (failed) throw new Error(`${failed}개 실패`)

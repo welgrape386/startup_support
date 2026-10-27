@@ -77,8 +77,8 @@ export function ruleProfile(raw: string, overrides: SupportMatchRequest['overrid
   return {
     age: { value: age },
     sido: { value: sido },
-    // 시도를 칩으로 고치면 문장 속 시군구는 더 이상 맞지 않을 수 있으므로 비운다
-    sigungu: { value: o.sido ? null : region.sigungu },
+    // 칩으로 고친 시군구가 우선. 시도만 고치면 문장 속 시군구는 더 이상 맞지 않을 수 있으므로 비운다
+    sigungu: { value: 'sigungu' in o ? ((o.sigungu as string | null) ?? null) : o.sido ? null : region.sigungu },
     bizStage: { value: (o.bizStage as BizStage | undefined) ?? (/예비/.test(text) ? '예비창업' : null) },
     industryCategory: { value: (o.industryCategory as string | undefined) ?? extractCategory(text) },
     industryText: { value: null },

@@ -11,6 +11,7 @@ import { kstDate, partition } from './eligibility'
 import { mockPrograms } from './mock'
 import { daysLeft, scoreMatch, sortResults } from './score'
 import type {
+  Category,
   MatchResult,
   SupportMatchRequest,
   SupportMatchResponse,
@@ -76,6 +77,42 @@ const SCREEN_TITLE: Record<string, string> = {
   'mock:pre-startup-package': '2026년 예비창업패키지 예비창업자 모집 공고',
   'mock:youth-startup-academy': '2026년 청년창업사관학교 입교생 모집 공고',
   'mock:incheon-sosang-bojeung': '2026년 인천 소상공인 특례보증 지원 공고',
+}
+
+// 카테고리 필터 확인용 support_types. 여러 개 붙은 공고와 공고가 없는 카테고리(인력·해외진출·기타 등)가 함께 보이게 나눴다
+const SCREEN_CATEGORIES: Record<string, Category[]> = {
+  'mock:youth-startup-fund': ['자금'],
+  'mock:pre-startup-package': ['자금', '교육·컨설팅'],
+  'mock:youth-startup-academy': ['자금', '교육·컨설팅', '공간·시설'],
+  'mock:incheon-sosang-bojeung': ['자금'],
+  'mock:screen-youth-edu': ['교육·컨설팅'],
+  'mock:screen-incheon-space': ['공간·시설'],
+  'mock:screen-mapo-grant': ['자금'],
+  'mock:screen-sosang-loan': ['자금', '교육·컨설팅'],
+  'mock:screen-incheon-relocate': ['자금', '공간·시설'],
+  'mock:screen-gangnam-space': ['공간·시설'],
+  'mock:screen-michuhol-space': ['공간·시설', '기술개발'],
+  'mock:screen-women-mentor': ['교육·컨설팅', '홍보·판매'],
+  'mock:screen-resident-edu': ['교육·컨설팅'],
+  'mock:screen-middle-age': ['자금'],
+  'mock:screen-tech-only': ['자금', '기술개발'],
+}
+
+/** 결과 전체 3줄 요약의 샘플 문장 (AI 요약 API 가 생기면 삭제). 숫자·공고명은 전부 판정 결과 summary 에서 가져온다 */
+export function mockSummaryLines({ summary: s }: SupportMatchResponse): string[] {
+  const cond = [
+    s.conditional.bizStage ? `개업 후 신청 가능한 공고 ${s.conditional.bizStage}건` : '',
+    s.conditional.sigungu ? `사업장 소재지 조건이 있는 공고 ${s.conditional.sigungu}건` : '',
+  ].filter(Boolean)
+  return [
+    `지금 신청 가능한 공고는 ${s.eligibleCount}건, 조건을 더 확인해야 하는 공고는 ${s.checkCount}건이에요.`,
+    cond.length ? `${cond.join(', ')}이 따로 있어요.` : '',
+    s.urgent
+      ? `마감이 가장 가까운 공고는 「${s.urgent.title}」(D-${s.urgent.daysLeft})예요.`
+      : s.caution
+        ? `「${s.caution.title}」은 "${s.caution.quote}" 조건 때문에 해당되지 않아요.`
+        : '',
+  ].filter(Boolean)
 }
 
 function screenSamples(today: string): SupportProgram[] {
@@ -170,6 +207,7 @@ export function buildUiPlaceholder(
   const programs = [...mockPrograms(today), bojeungSample(today), ...screenSamples(today)].map((p) => ({
     ...p,
     title: SCREEN_TITLE[p.id] ?? p.title,
+    support_types: SCREEN_CATEGORIES[p.id],
   }))
   const { eligible, conditional, excluded, rejected } = partition(programs, profile, today)
 

@@ -1,6 +1,10 @@
 /* 지원사업 매칭 공용 타입 (명세 3-2, 3-4, 5장). 클라이언트·서버 공용 */
 
 export type SupportType = '융자' | '보조금' | '보증' | '교육' | '멘토링' | '공간' | '사업화' | '기타'
+
+/** 결과 화면 카테고리 필터. 순서·표기 그대로 버튼에 쓴다 (공고의 support_types 값) */
+export const CATEGORIES = ['자금', '교육·컨설팅', '공간·시설', '홍보·판매', '인력', '기술개발', '해외진출', '제도·인증', '기타'] as const
+export type Category = (typeof CATEGORIES)[number]
 export type BizStage = '예비창업' | '업력3년이하' | '업력7년이하' | '기창업'
 export type TargetGroup = '청년' | '여성' | '장애인' | '중장년' | '소상공인' | '재창업' | '전체'
 
@@ -40,6 +44,8 @@ export type SupportProgram = {
   agency: string
   operator?: string
   supportTypes: SupportType[]
+  /** 카테고리 (여러 개 가능). API 필드명 그대로. 없으면 카테고리 필터에 걸리지 않는다 */
+  support_types?: Category[]
   /** 1인(1건)당 한도만. 포털 '지원규모'(사업 전체 예산)는 넣지 않는다 */
   amountMaxManwon?: number
   /** 사업 전체 예산 원문 (표시 전용, 점수·검증 근거로 쓰지 않음) */
