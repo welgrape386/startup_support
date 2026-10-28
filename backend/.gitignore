@@ -1,0 +1,15 @@
+.venv/
+.venv_fixed/
+__pycache__/
+.pytest_cache/
+*.pyc
+.env
+.env.*
+data/*.db
+data/*.db-*
+
+output*/
+*.backup_*.db
+*_before_mapping_*.db
+*.sqlite
+!.env.example

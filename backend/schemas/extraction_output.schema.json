@@ -1,0 +1,505 @@
+{
+  "$defs": {
+    "ExtraValues": {
+      "additionalProperties": false,
+      "properties": {
+        "나이_언급": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "나이 언급"
+        },
+        "창업단계_언급": {
+          "anyOf": [
+            {
+              "enum": [
+                "예비",
+                "개업"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "창업단계 언급"
+        },
+        "업력_개월": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "업력 개월"
+        },
+        "현재사업자등록상태": {
+          "anyOf": [
+            {
+              "enum": [
+                "등록",
+                "미등록"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "현재사업자등록상태"
+        },
+        "기업규모_표현": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "기업규모 표현"
+        },
+        "자금_언급_원": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "자금 언급 원"
+        }
+      },
+      "title": "ExtraValues",
+      "type": "object"
+    },
+    "Place": {
+      "additionalProperties": false,
+      "properties": {
+        "시도": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "시도"
+        },
+        "권역": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "권역"
+        },
+        "시군구": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "시군구"
+        }
+      },
+      "title": "Place",
+      "type": "object"
+    },
+    "SearchInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "검색지역": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "검색지역"
+        },
+        "검색시도": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "검색시도"
+        },
+        "필요지원": {
+          "items": {
+            "enum": [
+              "자금",
+              "교육·컨설팅",
+              "공간·시설",
+              "홍보·판매",
+              "인력",
+              "기술개발",
+              "해외진출",
+              "제도·인증",
+              "기타",
+              "미지정"
+            ],
+            "type": "string"
+          },
+          "title": "필요지원",
+          "type": "array"
+        },
+        "필요지원키워드": {
+          "items": {
+            "type": "string"
+          },
+          "title": "필요지원키워드",
+          "type": "array"
+        },
+        "상황키워드": {
+          "items": {
+            "type": "string"
+          },
+          "title": "상황키워드",
+          "type": "array"
+        },
+        "업종원문표현": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "업종원문표현"
+        }
+      },
+      "required": [
+        "필요지원",
+        "필요지원키워드",
+        "상황키워드"
+      ],
+      "title": "SearchInfo",
+      "type": "object"
+    },
+    "UserProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "사용자ID": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "사용자Id"
+        },
+        "생년월일": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "생년월일"
+        },
+        "성별": {
+          "anyOf": [
+            {
+              "enum": [
+                "여성",
+                "남성"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "성별"
+        },
+        "거주지": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "창업예정지": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "사업장소재지": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Place"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "창업일": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "창업일"
+        },
+        "기업형태": {
+          "anyOf": [
+            {
+              "enum": [
+                "개인사업자",
+                "법인"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "기업형태"
+        },
+        "상시근로자수": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "상시근로자수"
+        },
+        "연매출_원": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "연매출 원"
+        },
+        "보유요건": {
+          "items": {
+            "type": "string"
+          },
+          "title": "보유요건",
+          "type": "array"
+        },
+        "업종": {
+          "items": {
+            "enum": [
+              "A",
+              "B",
+              "C",
+              "D",
+              "E",
+              "F",
+              "G",
+              "H",
+              "I",
+              "J",
+              "K",
+              "L",
+              "M",
+              "N",
+              "O",
+              "P",
+              "Q",
+              "R",
+              "S",
+              "T",
+              "U"
+            ],
+            "type": "string"
+          },
+          "title": "업종",
+          "type": "array"
+        },
+        "사업자이력": {
+          "anyOf": [
+            {
+              "enum": [
+                "없음",
+                "폐업",
+                "현재보유"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "사업자이력"
+        },
+        "최근폐업일": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "최근폐업일"
+        },
+        "폐업업종": {
+          "anyOf": [
+            {
+              "enum": [
+                "A",
+                "B",
+                "C",
+                "D",
+                "E",
+                "F",
+                "G",
+                "H",
+                "I",
+                "J",
+                "K",
+                "L",
+                "M",
+                "N",
+                "O",
+                "P",
+                "Q",
+                "R",
+                "S",
+                "T",
+                "U"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "폐업업종"
+        },
+        "특수자격": {
+          "items": {
+            "type": "string"
+          },
+          "title": "특수자격",
+          "type": "array"
+        },
+        "제외해당": {
+          "items": {
+            "type": "string"
+          },
+          "title": "제외해당",
+          "type": "array"
+        },
+        "프랜차이즈": {
+          "anyOf": [
+            {
+              "enum": [
+                "아님",
+                "가맹점",
+                "직영점",
+                "가맹본부"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "프랜차이즈"
+        }
+      },
+      "required": [
+        "보유요건",
+        "업종",
+        "특수자격",
+        "제외해당"
+      ],
+      "title": "UserProfile",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "사용자프로필": {
+      "$ref": "#/$defs/UserProfile"
+    },
+    "검색정보": {
+      "$ref": "#/$defs/SearchInfo"
+    },
+    "추가추출값": {
+      "$ref": "#/$defs/ExtraValues"
+    }
+  },
+  "required": [
+    "사용자프로필",
+    "검색정보",
+    "추가추출값"
+  ],
+  "title": "ExtractionResult",
+  "type": "object"
+}
