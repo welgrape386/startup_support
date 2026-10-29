@@ -114,14 +114,6 @@ export function SupportMatchResults() {
     return () => window.clearInterval(id)
   }, [status])
 
-  // 신호등 4가지 건수: green=자격충족 / yellow=조건부 / unknown=확인필요 / red=해당안됨
-  const signalCounts = res ? {
-    green: res.results.filter((r) => r.verdict === '자격 충족').length,
-    yellow: res.conditional.length,
-    unknown: res.results.filter((r) => r.verdict === '확인 필요').length,
-    red: res.excluded.length,
-  } : null
-
   // 그룹별 필터·정렬 적용 결과 (red는 excluded 그대로)
   const groupedItems = useMemo(() => {
     if (!res) return null
@@ -140,6 +132,16 @@ export function SupportMatchResults() {
       red: res.excluded,
     }
   }, [res, categories, sort])
+
+  
+  // 신호등 4가지 건수: 카테고리 필터가 적용된 목록 기준 (카드 수와 같은 숫자)
+  // green=자격충족 / yellow=조건부 / unknown=확인필요 / red=해당안됨
+  const signalCounts = groupedItems ? {
+    green: groupedItems.green.length,
+    yellow: groupedItems.yellow.length,
+    unknown: groupedItems.unknown.length,
+    red: groupedItems.red.length,
+  } : null
 
   const toggleCategory = (c: Category) =>
     setCategories((cur) => (cur.includes(c) ? cur.filter((x) => x !== c) : [...cur, c]))
