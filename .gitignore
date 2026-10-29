@@ -8,3 +8,7 @@ data/raw/*
 data/programs.index.json
 *.tsbuildinfo
 !data/raw/manual/
+
+# Python
+__pycache__/
+*.pyc
