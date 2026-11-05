@@ -106,6 +106,17 @@ def _score(a, terms, profile):
     if profile['industryCategory']['value'] and profile['industryCategory']['value'].lower() in title:val+=5
     return max(0,int(val))
 
+EXEC_METHODS = {'직접수행', '위탁수행', '직접 수행', '위탁 수행'}
+
+def _short_summary(text, limit=80):
+    """카드용 한 줄 요약. 원문을 바꾸지 않고 머리말만 잘라 쓴다 (☞·※ 안내문 제외). 전체 원문은 상세 fields 에 남긴다."""
+    if not text:return ''
+    s=re.split(r'[☞※\n]', text, maxsplit=1)[0].strip()
+    if len(s)>limit:
+        cut=s[:limit]
+        s=(cut[:cut.rfind(' ')] if ' ' in cut[20:] else cut).rstrip(' ,.') + '…'
+    return s
+
 def _program(a, today):
     raw=a.raw_fields or {}
     fields={
@@ -125,11 +136,13 @@ def _program(a, today):
       'sourceId':a.announcement_id,'title':a.title,'agency':a.agency or '기관 정보 미상',
       'supportTypes':_support_types(a),'support_types':a.support_types or [],'rolling':a.rolling,'status':status,
       'duplicatePolicy':{'status':'미확인'},
-      'summary':a.summary or a.title,'url':a.announcement_url or '',
+      'summary':_short_summary(a.summary) or a.title,'url':a.announcement_url or '',
       'fields':fields,'fetchedAt':(a.fetched_updated_at or a.fetched_created_at or today.isoformat())[:10],
       'reviewed':False,'attachmentFiles':files,
     }
-    if a.operator:data['operator']=a.operator
+    # 수행 방식(직접수행 등)은 기관명이 아니므로 운영기관 자리에 넣지 않는다 (기관은 agency 로 표시)
+    if a.operator and a.operator.strip() in EXEC_METHODS:fields['수행방식']=a.operator.strip()
+    elif a.operator:data['operator']=a.operator
     if a.apply_start:data['applyStart']=a.apply_start.isoformat()
     if a.apply_end:data['applyEnd']=a.apply_end.isoformat()
     if a.contact:data['contact']=a.contact
