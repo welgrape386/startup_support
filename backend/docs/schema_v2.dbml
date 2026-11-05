@@ -1,0 +1,164 @@
+// 통합 ERD v2: 설계 제안. DBML 파일은 dbdiagram.io 등의 시각화 용도, ERDCloud import 보장 안 함.
+Project startup_support_v2 {
+  database_type: 'PostgreSQL'
+  Note: '실제 DB는 현재 SQLite 초기 4테이블, 추가 4테이블은 설계 제안'
+}
+
+Table announcements {
+  announcement_id varchar(32) [pk, not null]
+  source varchar(30) [not null]
+  title text [not null]
+  agency text
+  operator text
+  category_large varchar(100)
+  category_medium varchar(100)
+  target_name text
+  summary text
+  hashtags text
+  application_period_raw text
+  apply_start date
+  apply_end date
+  rolling boolean [not null]
+  application_method text
+  announcement_url text
+  application_url text
+  contact text
+  fetched_created_at varchar(30)
+  fetched_updated_at varchar(30)
+  raw_fields jsonb [not null]
+  support_types_json jsonb
+  amount_max_manwon integer
+  total_budget_text text
+  interest_rate varchar(100)
+  support_detail text
+  status varchar(20)
+  duplicate_policy_json jsonb
+  submission_docs_json jsonb
+  bonus_points_json jsonb
+  rounds_json jsonb
+  reviewed boolean [not null]
+  collected_at timestamptz
+}
+
+Table files {
+  file_id integer [pk, not null]
+  announcement_id varchar(32) [not null]
+  file_name text
+  file_url text [not null]
+  file_type varchar(16)
+  file_role varchar(30) [not null]
+  sequence integer [not null]
+  download_status varchar(32) [not null]
+  local_path text
+  downloaded_at timestamptz
+}
+
+Table texts {
+  text_id integer [pk, not null]
+  announcement_id varchar(32) [not null]
+  content text
+  source_format varchar(20)
+  source_file_name text
+  extraction_status varchar(80) [not null]
+  suspected_incomplete boolean [not null]
+  extraction_error text
+  extracted_at timestamp
+  file_id integer
+  source_kind varchar(30) [not null]
+  is_primary boolean [not null]
+  section_name varchar(100)
+}
+
+Table conditions {
+  condition_id integer [pk, not null]
+  announcement_id varchar(32) [not null, unique]
+  schema_version varchar(20)
+  condition_json jsonb
+  sido varchar(70)
+  business_registration varchar(60)
+  max_startup_months integer
+  max_age integer
+  extraction_status varchar(30) [not null]
+  extracted_at timestamp
+  source_text_id integer
+  model_name varchar(100)
+  prompt_version varchar(50)
+  quote_validation_status varchar(30)
+}
+
+Table user_requests {
+  request_id bigint [pk, not null]
+  input_text text [not null]
+  profile_json jsonb
+  age integer
+  sido varchar(70)
+  sigungu varchar(70)
+  biz_stage varchar(50)
+  industry_ksic_json jsonb
+  needs_json jsonb
+  profile_status varchar(30) [not null]
+  created_at timestamptz [not null]
+}
+
+Table match_runs {
+  run_id bigint [pk, not null]
+  request_id bigint [not null]
+  execution_status varchar(30) [not null]
+  data_source varchar(20) [not null]
+  search_version varchar(50)
+  judge_version varchar(50)
+  parser_version varchar(50)
+  schema_version varchar(20)
+  data_snapshot varchar(80)
+  processing_time_ms integer
+  input_tokens integer
+  output_tokens integer
+  estimated_cost numeric(14,6)
+  cost_currency varchar(10)
+  summary_json jsonb
+  coverage_json jsonb
+  started_at timestamptz [not null]
+  completed_at timestamptz
+  error_code varchar(60)
+}
+
+Table match_results {
+  result_id bigint [pk, not null]
+  run_id bigint [not null]
+  announcement_id varchar(32) [not null]
+  verdict varchar(30) [not null]
+  score numeric(5,2)
+  rank_number integer
+  headline text
+  reasons_json jsonb
+  cautions_json jsonb
+  exceptions_json jsonb
+  created_at timestamptz [not null]
+}
+
+Table condition_checks {
+  check_id bigint [pk, not null]
+  result_id bigint [not null]
+  condition_id integer
+  condition_path varchar(255)
+  check_status varchar(30) [not null]
+  user_value_json jsonb
+  required_value_json jsonb
+  reason text
+  evidence_quote text
+  evidence_verified boolean
+  evidence_start integer
+  evidence_end integer
+  created_at timestamptz [not null]
+}
+
+Ref: files.announcement_id > announcements.announcement_id
+Ref: texts.announcement_id > announcements.announcement_id
+Ref: texts.file_id > files.file_id
+Ref: conditions.announcement_id > announcements.announcement_id
+Ref: conditions.source_text_id > texts.text_id
+Ref: match_runs.request_id > user_requests.request_id
+Ref: match_results.run_id > match_runs.run_id
+Ref: match_results.announcement_id > announcements.announcement_id
+Ref: condition_checks.result_id > match_results.result_id
+Ref: condition_checks.condition_id > conditions.condition_id
