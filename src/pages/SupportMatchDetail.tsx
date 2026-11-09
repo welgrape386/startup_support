@@ -100,6 +100,7 @@ export function SupportMatchDetail() {
   const submissionDocs = p.submissionDocs ?? []
   const bonusPoints = p.bonusPoints ?? []
   const attachmentFiles = p.attachmentFiles ?? []
+  const applyUrl = p.applyUrl
   const hasRounds = (p.rounds?.length ?? 0) > 0
 
   return (
@@ -386,6 +387,17 @@ export function SupportMatchDetail() {
                 공고 원문 보기
                 <Icon name="arrow-right" size={15} />
               </a>
+              {applyUrl && (
+                <a
+                  href={applyUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={buttonClasses('primary', 'md', 'w-full')}
+                >
+                  신청하러 가기
+                  <Icon name="arrow-right" size={15} />
+                </a>
+              )}
               <a
                 href={p.url}
                 target="_blank"
