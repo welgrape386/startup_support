@@ -166,7 +166,7 @@ def _program(a, today):
     if a.application_url:data['applyUrl']=a.application_url
     return data
 
-def get_match_response(request: SupportMatchRequest, session: Session, limit=12, as_of=None, extracted=None):
+def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP_K, as_of=None, extracted=None):
     today=as_of or date.today()
     profile,missing=get_profile(request.text,request.overrides)
     # Keep original UI profile shape; let AI fill available values when enabled.
