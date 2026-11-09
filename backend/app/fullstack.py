@@ -9,6 +9,12 @@ from pathlib import Path
 from fastapi import HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 from app.main import app
+from app.rag_search import warmup
+
+# 서버가 켜질 때 RAG 모델을 미리 올린다 (실패해도 서버는 켜지고 키워드 검색으로 동작)
+@app.on_event('startup')
+def _rag_warmup():
+    warmup()
 
 # Support both layouts without changing any frontend code:
 # (a) local bundle: project/frontend/dist + project/backend
