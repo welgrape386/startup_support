@@ -115,7 +115,7 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
         </div>
 
         {open && (
-          <RuleChecklist rules={r.rules} profile={profile} />
+          <RuleChecklist rules={r.rules} />
         )}
       </div>
     </Card>

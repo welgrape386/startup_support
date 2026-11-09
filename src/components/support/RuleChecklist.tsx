@@ -1,6 +1,6 @@
 import { cx } from '@/lib/cx'
 import { ageRange, shortSido } from '@/services/supportMatch/eligibility'
-import type { EligibilityRule, RuleResult, UserProfile } from '@/services/supportMatch/types'
+import type { EligibilityRule, RuleResult } from '@/services/supportMatch/types'
 
 const LABEL: Record<EligibilityRule['kind'], string> = {
   age: '나이',
@@ -11,7 +11,7 @@ const LABEL: Record<EligibilityRule['kind'], string> = {
   other: '기타 조건',
 }
 
-// 판정은 기호 + 글자 + 색을 함께 쓴다 (색만으로 구분하지 않음)
+// 결과는 기호 + 글자 + 색을 함께 쓴다 (색만으로 구분하지 않음)
 const MARK = {
   pass: { sym: '✔', text: '충족', cls: 'text-pos' },
   fail: { sym: '✘', text: '미충족', cls: 'text-neg' },
@@ -38,70 +38,49 @@ function condition(r: EligibilityRule): string {
   }
 }
 
-/** 사용자가 입력한 값 (체크리스트에서 나이·지역·창업 단계·업종만 옆에 보여준다). 값이 없으면 null */
-function mine(kind: EligibilityRule['kind'], p: UserProfile): string | null {
-  switch (kind) {
-    case 'age':
-      return p.age.value != null ? `${p.age.value}세` : null
-    case 'region': {
-      const s = [p.sido.value, p.sigungu.value].filter(Boolean).join(' ')
-      return s || null
-    }
-    case 'bizStage':
-      return p.bizStage.value ?? null
-    case 'industry':
-      return p.industryCategory.value ?? null
-    default:
-      return null
-  }
-}
-
-/** 공고 조건이 없어도 항상 보여주는 항목 */
+/** 나이·지역·창업 단계·업종은 공고 조건이 아직 없어도 줄을 보여준다 (공고 조건은 확인 필요) */
 const SHOWN_KINDS: EligibilityRule['kind'][] = ['age', 'region', 'bizStage', 'industry']
 
-// 카드(격자 한 칸) 안에 들어가도록 촘촘하게
-const ROW = 'flex flex-col gap-0.5 px-2.5 py-2 text-[13px]'
+// 카드(격자 한 칸) 안에 들어가도록 촘촘하게. 왼쪽은 항목·조건, 오른쪽은 결과
+const ROW = 'flex items-start justify-between gap-3 px-2.5 py-2 text-[13px]'
 
-/** 판정 기호 + 판정 글자 + 항목 + 조건 (한 덩어리로 붙여 쓴다) */
-function Head({ mark, label, children }: { mark: (typeof MARK)[keyof typeof MARK]; label: string; children?: string }) {
+/** 한 줄: 왼쪽 항목 + 공고 조건, 오른쪽 결과 (충족 / 미충족 / 확인 필요) */
+function Row({ mark, label, indent, children }: { mark: (typeof MARK)[keyof typeof MARK]; label: string; indent?: boolean; children: string }) {
   return (
-    <span className="text-ink-soft">
-      <span className={cx('mr-1.5 font-bold whitespace-nowrap', mark.cls)}>
+    <div className={cx(ROW, indent && 'pl-5')}>
+      <span className="min-w-0 text-ink-soft">
+        <span className="font-semibold text-ink">{label}</span> {children}
+      </span>
+      <span className={cx('shrink-0 font-bold whitespace-nowrap', mark.cls)}>
         <span aria-hidden="true">{mark.sym}</span> {mark.text}
       </span>
-      <span className="font-semibold text-ink">{label}</span> {children}
-    </span>
+    </div>
   )
 }
 
-/** B. 조건 체크리스트: 규칙마다 판정 + 항목 + 공고 조건 한 줄씩 (명세 6-B).
-    내 값·원문 인용·예외 조항은 화면을 깔끔하게 하려고 빼 두었다 (사용자 결정 2026-10-17) */
-export function RuleChecklist({ rules, profile }: { rules: RuleResult[]; profile: UserProfile }) {
+/** B. 조건 체크리스트: 규칙마다 항목 · 공고 조건 · 결과 한 줄씩 (명세 6-B).
+    내 입력·원문 인용·예외 조항은 화면을 깔끔하게 하려고 빼 두었다 */
+export function RuleChecklist({ rules }: { rules: RuleResult[] }) {
   return (
     // 카드 크기를 크게 바꾸지 않도록 높이를 제한하고 안에서 스크롤한다
     <ul className="flex max-h-64 flex-col divide-y divide-line overflow-y-auto rounded-panel border border-line bg-surface">
-      {/* 나이·지역·창업 단계·업종은 공고 조건이 아직 없어도 줄을 보여준다 (내 입력만 채움, 공고 조건은 확인 필요) */}
       {SHOWN_KINDS.filter((k) => !rules.some((x) => x.rule.kind === k)).map((k) => (
-        <li key={'missing-' + k} className={ROW}>
-          <Head mark={MARK.unknown} label={LABEL[k]}>공고 조건 확인 필요</Head>
-          {mine(k, profile) && <span className="pl-0.5 text-muted">내 입력: {mine(k, profile)}</span>}
+        <li key={'missing-' + k}>
+          <Row mark={MARK.unknown} label={LABEL[k]}>공고 조건 확인 필요</Row>
         </li>
       ))}
       {rules.map((x, i) => {
         const groupStart = x.group && rules[i - 1]?.group?.id !== x.group.id
         return (
-          <li key={x.rule.kind + x.rule.quote} className={cx(ROW, x.group && 'pl-5')}>
+          <li key={x.rule.kind + x.rule.quote}>
             {groupStart && (
-              <span className="-ml-2.5 font-bold text-muted">
+              <span className="block px-2.5 pt-2 font-bold text-muted">
                 아래 조건 중 하나만 맞으면 돼요 · 그룹 판정 {MARK[x.group!.result].text}
               </span>
             )}
-            <Head mark={MARK[x.result]} label={LABEL[x.rule.kind]}>
+            <Row mark={MARK[x.result]} label={LABEL[x.rule.kind]} indent={!!x.group}>
               {condition(x.rule)}
-            </Head>
-            {mine(x.rule.kind, profile) && (
-              <span className="pl-0.5 text-muted">내 입력: {mine(x.rule.kind, profile)}</span>
-            )}
+            </Row>
           </li>
         )
       })}
