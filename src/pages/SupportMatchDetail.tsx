@@ -259,21 +259,6 @@ export function SupportMatchDetail() {
             )}
           </Card>
 
-          {/* 4.1.5 신청 URL (공고 사이트 바로가기는 사이드 카드에만 둔다) */}
-          {applyUrl && (
-            <div className="flex flex-wrap gap-3">
-              <a
-                href={applyUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonClasses('primary', 'md')}
-              >
-                신청하러 가기
-                <Icon name="arrow-right" size={15} />
-              </a>
-            </div>
-          )}
-
           {/* 4.2 신청 준비 */}
           <Card>
             <SectionTitle>신청 준비</SectionTitle>
