@@ -176,7 +176,6 @@ export function SupportMatchDetail() {
                 {p.fields['지원내용']}
               </blockquote>
             )}
-            <p className="mt-3 text-[12px] text-muted">* 원문과 대조해 확인하세요.</p>
           </Card>
 
           {/* 4.1.3 접수 기간 */}
