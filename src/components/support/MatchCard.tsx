@@ -49,7 +49,6 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
   const navigate = useNavigate()
   const p = r.program
   const cField = r.verdict === '조건부' ? conditionalField(r.rules, profile) : null
-  const dup = p.duplicatePolicy
   // 수행기관이 있으면 수행기관을 먼저 보여준다
   const meta = [p.operator ?? p.agency, p.amountMaxManwon != null ? `1인 최대 ${won(p.amountMaxManwon)}` : null].filter(
     Boolean,
@@ -80,7 +79,6 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
               {t}
             </Badge>
           ))}
-          <Badge tone={dup.status === '불가' ? 'warn' : 'neutral'}>중복 지원 {dup.status}</Badge>
         </div>
 
         {/* 배지 줄과 공고명 사이를 조금 더 띄운다 */}
@@ -117,7 +115,7 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
         </div>
 
         {open && (
-          <RuleChecklist rules={r.rules} duplicatePolicy={dup} />
+          <RuleChecklist rules={r.rules} profile={profile} />
         )}
       </div>
     </Card>

@@ -1,6 +1,6 @@
 import { cx } from '@/lib/cx'
 import { ageRange, shortSido } from '@/services/supportMatch/eligibility'
-import type { DuplicatePolicy, EligibilityRule, RuleResult } from '@/services/supportMatch/types'
+import type { EligibilityRule, RuleResult, UserProfile } from '@/services/supportMatch/types'
 
 const LABEL: Record<EligibilityRule['kind'], string> = {
   age: '나이',
@@ -38,6 +38,24 @@ function condition(r: EligibilityRule): string {
   }
 }
 
+/** 사용자가 입력한 값 (체크리스트에서 나이·지역·창업 단계·업종만 옆에 보여준다). 값이 없으면 null */
+function mine(kind: EligibilityRule['kind'], p: UserProfile): string | null {
+  switch (kind) {
+    case 'age':
+      return p.age.value != null ? `${p.age.value}세` : null
+    case 'region': {
+      const s = [p.sido.value, p.sigungu.value].filter(Boolean).join(' ')
+      return s || null
+    }
+    case 'bizStage':
+      return p.bizStage.value ?? null
+    case 'industry':
+      return p.industryCategory.value ?? null
+    default:
+      return null
+  }
+}
+
 // 카드(격자 한 칸) 안에 들어가도록 촘촘하게
 const ROW = 'flex flex-col gap-0.5 px-2.5 py-2 text-[13px]'
 
@@ -55,7 +73,7 @@ function Head({ mark, label, children }: { mark: (typeof MARK)[keyof typeof MARK
 
 /** B. 조건 체크리스트: 규칙마다 판정 + 항목 + 공고 조건 한 줄씩 (명세 6-B).
     내 값·원문 인용·예외 조항은 화면을 깔끔하게 하려고 빼 두었다 (사용자 결정 2026-10-17) */
-export function RuleChecklist({ rules, duplicatePolicy }: { rules: RuleResult[]; duplicatePolicy: DuplicatePolicy }) {
+export function RuleChecklist({ rules, profile }: { rules: RuleResult[]; profile: UserProfile }) {
   return (
     // 카드 크기를 크게 바꾸지 않도록 높이를 제한하고 안에서 스크롤한다
     <ul className="flex max-h-64 flex-col divide-y divide-line overflow-y-auto rounded-panel border border-line bg-surface">
@@ -71,15 +89,12 @@ export function RuleChecklist({ rules, duplicatePolicy }: { rules: RuleResult[];
             <Head mark={MARK[x.result]} label={LABEL[x.rule.kind]}>
               {condition(x.rule)}
             </Head>
+            {mine(x.rule.kind, profile) && (
+              <span className="pl-0.5 text-muted">내 입력: {mine(x.rule.kind, profile)}</span>
+            )}
           </li>
         )
       })}
-      <li className={ROW}>
-        <span className="text-ink-soft">
-          <span className="mr-1.5 font-bold text-muted">{duplicatePolicy.status}</span>
-          <span className="font-semibold text-ink">중복 지원</span>
-        </span>
-      </li>
     </ul>
   )
 }
