@@ -140,9 +140,12 @@ def _program(a, today):
       'fields':fields,'fetchedAt':(a.fetched_updated_at or a.fetched_created_at or today.isoformat())[:10],
       'reviewed':False,'attachmentFiles':files,
     }
-    # 수행 방식(직접수행 등)은 기관명이 아니므로 운영기관 자리에 넣지 않는다 (기관은 agency 로 표시)
-    if a.operator and a.operator.strip() in EXEC_METHODS:fields['수행방식']=a.operator.strip()
-    elif a.operator:data['operator']=a.operator
+    # 카드 기관 칸은 주관기관(agency)으로 통일한다 (사용자 결정 2026-11-09).
+    # 수행기관은 카드에 쓰지 않고 상세 fields 에만 보관한다. 직접수행·기초자치단체 같은 값은 기관명이 아니다.
+    if a.operator:
+        op=a.operator.strip()
+        if op in EXEC_METHODS: fields['수행방식']=op
+        elif op and op!='기초자치단체': fields['수행기관']=op
     if a.apply_start:data['applyStart']=a.apply_start.isoformat()
     if a.apply_end:data['applyEnd']=a.apply_end.isoformat()
     if a.contact:data['contact']=a.contact
