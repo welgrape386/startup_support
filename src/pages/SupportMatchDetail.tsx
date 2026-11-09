@@ -162,9 +162,10 @@ export function SupportMatchDetail() {
                 {p.supportDetail}
               </p>
             )}
-            {p.summary && (
-              <p className="text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
-                {p.summary}
+            {/* 카드는 요약(80자), 상세는 원문 전체 (사업개요). 줄바꿈과 ☞ 항목을 그대로 보여준다 */}
+            {(p.fields['사업개요'] || p.summary) && (
+              <p className="whitespace-pre-line text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
+                {p.fields['사업개요'] || p.summary}
               </p>
             )}
             {p.fields['지원내용'] && (
