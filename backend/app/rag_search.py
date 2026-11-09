@@ -15,7 +15,8 @@ log = logging.getLogger(__name__)
 
 DEFAULT_DIR = Path(__file__).resolve().parents[2] / 'rag' / '04_실험_시험+채점결과'
 RAG_DIR = Path(os.environ.get('RAG_DIR', DEFAULT_DIR))
-TOP_K = int(os.environ.get('SEARCH_TOP_K', '20'))
+TOP_K = int(os.environ.get('SEARCH_TOP_K', '20'))      # 필터 이후 판정으로 넘길 개수
+POOL = int(os.environ.get('RAG_POOL', '100'))          # 필터 전에 RAG에서 받아 둘 개수 (마감·지역 필터로 많이 빠지므로 넉넉히)
 
 _loaded = None  # None: 아직 안 불러봄 / True: 사용 가능 / False: 사용 불가
 
@@ -41,7 +42,7 @@ def search_ranked(query, user_gu=''):
         return None
     try:
         from search_service import search
-        return search(query, user_gu=user_gu or '', k=TOP_K)
+        return search(query, user_gu=user_gu or '', k=max(POOL, TOP_K))
     except Exception as e:
         log.warning('RAG 검색 중 오류, 키워드 검색으로 대체합니다: %s', e)
         return None
