@@ -107,6 +107,18 @@ def _score(a, terms, profile):
     return max(0,int(val))
 
 EXEC_METHODS = {'직접수행', '위탁수행', '직접 수행', '위탁 수행'}
+PLACEHOLDER_ORG = {'기초자치단체'}
+
+def _card_org(a):
+    """카드 기관 칸 값. 수행기관이 실제 기관명이면 그대로, 자리표시 값이면 None(주관기관 사용).
+    '기초자치단체'는 제목 머리말 [부산] 남구 에서 '부산 남구'를 만든다 (없으면 주관기관)."""
+    exe=(a.operator or '').strip()
+    if exe and exe not in EXEC_METHODS and exe not in PLACEHOLDER_ORG:
+        return exe
+    if exe in PLACEHOLDER_ORG:
+        m=re.match(r'^\[([^\]]+)\]\s*([^\s\d\[\]]+)', (a.title or '').strip())
+        if m: return f"{m.group(1)} {m.group(2)}"
+    return None
 
 def _short_summary(text, limit=80):
     """카드용 한 줄 요약. 원문을 바꾸지 않고 머리말만 잘라 쓴다 (☞·※ 안내문 제외). 전체 원문은 상세 fields 에 남긴다."""
@@ -140,12 +152,13 @@ def _program(a, today):
       'fields':fields,'fetchedAt':(a.fetched_updated_at or a.fetched_created_at or today.isoformat())[:10],
       'reviewed':False,'attachmentFiles':files,
     }
-    # 카드 기관 칸은 주관기관(agency)으로 통일한다 (사용자 결정 2026-11-09).
-    # 수행기관은 카드에 쓰지 않고 상세 fields 에만 보관한다. 직접수행·기초자치단체 같은 값은 기관명이 아니다.
-    if a.operator:
-        op=a.operator.strip()
-        if op in EXEC_METHODS: fields['수행방식']=op
-        elif op and op!='기초자치단체': fields['수행기관']=op
+    # 카드 기관 칸: 실제 수행기관명이면 수행기관, 아니면 주관기관(agency). 주관기관은 상세 fields 에도 남긴다.
+    exe=(a.operator or '').strip()
+    org=_card_org(a)
+    if org: data['operator']=org
+    fields['주관기관']=a.agency or ''
+    if exe in EXEC_METHODS: fields['수행방식']=exe
+    elif exe and exe not in PLACEHOLDER_ORG: fields['수행기관']=exe
     if a.apply_start:data['applyStart']=a.apply_start.isoformat()
     if a.apply_end:data['applyEnd']=a.apply_end.isoformat()
     if a.contact:data['contact']=a.contact
