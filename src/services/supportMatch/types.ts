@@ -61,10 +61,6 @@ export type SupportProgram = {
   eligibility: RuleGroup[]
   duplicatePolicy: DuplicatePolicy
   summary: string
-  /** 카드 1줄: 무엇 (분야 중분류, category_medium) */
-  category?: string
-  /** 카드 2줄: 대상 (지원 대상 원문, target_name) */
-  target?: string
   url: string
   contact?: string
   /** 신청 사이트 URL (기업마당 외 별도 신청 페이지가 있을 때) */
