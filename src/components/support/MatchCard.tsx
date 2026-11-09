@@ -90,7 +90,8 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
         </div>
 
         {/* 공고마다 같은 판정 문구(headline) 대신 공고 데이터의 사업 요약을 보여준다 */}
-        {p.summary && <p className="text-sm leading-relaxed text-ink-soft">{p.summary}</p>}
+        {/* 3줄까지만 보이고 넘치면 … 으로 줄인다. 3줄 안에 끝나는 요약은 전부 보인다 */}
+        {p.summary && <p className="line-clamp-3 text-sm leading-relaxed text-ink-soft">{p.summary}</p>}
 
         {/* 링크는 카드 맨 아래에 붙여 같은 줄 카드끼리 위치를 맞춘다 */}
         <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2">
