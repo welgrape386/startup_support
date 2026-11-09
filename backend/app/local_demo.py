@@ -129,9 +129,11 @@ def _short_summary(text, limit=80):
         s=(cut[:cut.rfind(' ')] if ' ' in cut[20:] else cut).rstrip(' ,.') + '…'
     return s
 
+# 카드 요약: ☞ 줄 두 개(대상 + 지원 내용)가 이 글자 수 안이면 둘 다 보이고, 넘으면 지원 내용 줄만 보인다.
+CARD_SUMMARY_MAX = 70
+
 def _card_summary(text):
-    """카드용 요약: '☞' 안내 줄만 모은다 (대상 줄 + 지원 내용 줄). 마커만 떼고 원문 문장은 그대로 둔다.
-    ☞ 줄이 없으면 머리말 요약(_short_summary)으로 대신한다."""
+    """카드용 요약: '☞' 안내 줄만 모은다. 짧으면 전부, 길면 마지막 ☞ 줄(지원 내용)만. ☞ 줄이 없으면 머리말 요약."""
     if not text: return ''
     lines=[]
     for ln in text.splitlines():
@@ -139,7 +141,9 @@ def _card_summary(text):
         if ln.startswith('☞'):
             t=ln[1:].strip()
             if t: lines.append(t)
-    return '\n'.join(lines) if lines else _short_summary(text)
+    if not lines: return _short_summary(text)
+    whole='\n'.join(lines)
+    return whole if len(whole)<=CARD_SUMMARY_MAX else lines[-1]
 
 def _program(a, today):
     raw=a.raw_fields or {}
