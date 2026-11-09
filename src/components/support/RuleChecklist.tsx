@@ -56,6 +56,9 @@ function mine(kind: EligibilityRule['kind'], p: UserProfile): string | null {
   }
 }
 
+/** 공고 조건이 없어도 항상 보여주는 항목 */
+const SHOWN_KINDS: EligibilityRule['kind'][] = ['age', 'region', 'bizStage', 'industry']
+
 // 카드(격자 한 칸) 안에 들어가도록 촘촘하게
 const ROW = 'flex flex-col gap-0.5 px-2.5 py-2 text-[13px]'
 
@@ -77,6 +80,13 @@ export function RuleChecklist({ rules, profile }: { rules: RuleResult[]; profile
   return (
     // 카드 크기를 크게 바꾸지 않도록 높이를 제한하고 안에서 스크롤한다
     <ul className="flex max-h-64 flex-col divide-y divide-line overflow-y-auto rounded-panel border border-line bg-surface">
+      {/* 나이·지역·창업 단계·업종은 공고 조건이 아직 없어도 줄을 보여준다 (내 입력만 채움, 공고 조건은 확인 필요) */}
+      {SHOWN_KINDS.filter((k) => !rules.some((x) => x.rule.kind === k)).map((k) => (
+        <li key={'missing-' + k} className={ROW}>
+          <Head mark={MARK.unknown} label={LABEL[k]}>공고 조건 확인 필요</Head>
+          {mine(k, profile) && <span className="pl-0.5 text-muted">내 입력: {mine(k, profile)}</span>}
+        </li>
+      ))}
       {rules.map((x, i) => {
         const groupStart = x.group && rules[i - 1]?.group?.id !== x.group.id
         return (
