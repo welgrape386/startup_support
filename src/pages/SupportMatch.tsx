@@ -63,18 +63,28 @@ export function SupportMatch() {
         description="나이, 지역, 창업 단계, 필요한 지원을 편하게 적어주세요."
       />
 
-      {/* 입력 가이드: 무엇을 적어야 하는지 예시와 함께 보여준다 (회의 요청) */}
-      <Card className="flex flex-col gap-2 text-sm leading-relaxed text-ink-soft">
-        <p className="font-semibold text-ink">이렇게 적어 주세요</p>
-        <p>
-          <span className="font-semibold text-ink">필수:</span> 만 나이, 거주지(서울 구)
+      {/* 입력 가이드: 무엇을 적어야 하는지 예시와 함께 보여준다 (회의 요청). 색은 index.css 토큰만 쓴다 */}
+      <Card className="flex flex-col gap-4 border-primary-100 bg-primary-50">
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-info-soft text-primary-600">
+            <Icon name="info" size={18} />
+          </span>
+          <h2 className="text-[17px] font-bold text-primary-700">이렇게 적어 주세요</h2>
+        </div>
+        <ul className="flex flex-col gap-2 text-sm leading-relaxed text-ink-soft">
+          <li>
+            <span className="font-semibold text-ink">필수</span> · 만 나이, 거주지(서울 구)
+          </li>
+          <li>
+            <span className="font-semibold text-ink">기존 창업자</span> · 업력(개월 수), 사업장 구
+          </li>
+          <li>
+            <span className="font-semibold text-ink">예비 창업자</span> · 창업 예정 구
+          </li>
+        </ul>
+        <p className="rounded-panel border border-primary-100 bg-surface px-4 py-3 text-[13px] leading-relaxed text-ink-soft">
+          예) 29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요.
         </p>
-        <p>
-          <span className="font-semibold text-ink">기존 창업자:</span> 업력(개월 수), 사업장 구
-          <br />
-          <span className="font-semibold text-ink">예비 창업자:</span> 창업 예정 구
-        </p>
-        <p className="text-[13px] text-muted">예) 29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요.</p>
       </Card>
 
       <Card className="flex flex-col gap-4">
