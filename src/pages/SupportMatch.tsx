@@ -63,29 +63,32 @@ export function SupportMatch() {
         description="나이, 지역, 창업 단계, 필요한 지원을 편하게 적어주세요."
       />
 
-      {/* 입력 가이드: 무엇을 적어야 하는지 예시와 함께 보여준다 (회의 요청). 색은 index.css 토큰만 쓴다 */}
-      {/* 배경·테두리 색은 메인 "이렇게 적으면 정확해져요" 카드와 같은 값 (#f2f6ff / #dbe5ff) */}
-      <Card className="flex flex-col gap-4" style={{ background: '#f2f6ff', border: '1px solid #dbe5ff' }}>
+      {/* 입력 가이드: 항목별 격자 + 태그로 구분한다. 배경·테두리는 메인 "이렇게 적으면 정확해져요"와 같은 값 */}
+      <Card className="flex flex-col gap-5" style={{ background: '#f2f6ff', border: '1px solid #dbe5ff' }}>
         <div className="flex items-center gap-3">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-info-soft text-primary-600">
             <Icon name="info" size={18} />
           </span>
           <h2 className="text-[17px] font-bold text-ink">이렇게 적어 주세요</h2>
         </div>
-        <ul className="flex flex-col gap-2 text-sm leading-relaxed text-ink">
-          <li>
-            <span className="font-semibold text-ink">필수</span> · 만 나이, 거주지(서울 구)
-          </li>
-          <li>
-            <span className="font-semibold text-ink">기존 창업자</span> · 업력(개월 수), 사업장 구
-          </li>
-          <li>
-            <span className="font-semibold text-ink">예비 창업자</span> · 창업 예정 구
-          </li>
-        </ul>
-        <p className="rounded-panel border border-primary-100 bg-surface px-4 py-3 text-[13px] leading-relaxed text-ink">
-          예) 29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요.
-        </p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
+            <span className="w-fit rounded-chip bg-primary-600 px-2.5 py-0.5 text-xs font-bold text-white">필수</span>
+            <p className="text-[15px] leading-relaxed text-ink">만 나이, 거주지(서울 구)</p>
+          </div>
+          <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
+            <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">기존 창업자</span>
+            <p className="text-[15px] leading-relaxed text-ink">업력(개월 수), 사업장 구</p>
+          </div>
+          <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
+            <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">예비 창업자</span>
+            <p className="text-[15px] leading-relaxed text-ink">창업 예정 구</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5 rounded-panel border border-primary-100 bg-surface px-4 py-3">
+          <span className="text-xs font-bold text-muted">예시</span>
+          <p className="text-[14px] leading-relaxed text-ink">예) 29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요.</p>
+        </div>
       </Card>
 
       <Card className="flex flex-col gap-4">
@@ -142,11 +145,7 @@ export function SupportMatch() {
           ))}
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="flex items-center gap-1.5 text-[13px] text-muted">
-            <Icon name="info" size={12} />
-            나이·지역·창업 단계를 적으면 자격을 정확히 판정할 수 있어요
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <Button size="lg" iconRight="arrow-right" onClick={submit} disabled={!canSubmit}>
             지원사업 찾기
           </Button>
