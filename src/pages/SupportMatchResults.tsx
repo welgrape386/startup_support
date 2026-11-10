@@ -21,6 +21,7 @@ import {
   type UserProfile,
 } from '@/services/supportMatch/types'
 import { loadInput, saveInput } from '@/lib/supportMatchInput'
+import { fieldLabel } from '@/services/supportMatch/required'
 import { Analyzing, SignalLight, SignalSummaryBar, type Verdict } from '../../SignalComponents2'
 
 type Sort = 'recommend' | 'deadline'
@@ -233,7 +234,15 @@ export function SupportMatchResults() {
                     <span className="flex flex-col items-start gap-1">
                       <span>
                         <span className="font-semibold text-ink">조건을 수정해보세요.</span> 지금 신청 가능한 공고가 없어요.
-                        위 &lsquo;이렇게 이해했어요&rsquo;의 칩을 눌러 나이·지역·창업 단계를 고치고 저장하면 다시 판정해요.
+                        위 &lsquo;이렇게 이해했어요&rsquo;의 칩을 눌러 고치고 저장하면 다시 판정해요.
+                        {res.missing.length > 0 && (
+                          <span className="mt-1 block">
+                            빠진 정보:{' '}
+                            <span className="font-semibold text-ink">
+                              {res.missing.map((k) => fieldLabel(k, res.profile)).join(', ')}
+                            </span>
+                          </span>
+                        )}
                       </span>
                       <button
                         type="button"

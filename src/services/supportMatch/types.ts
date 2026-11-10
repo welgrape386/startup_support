@@ -101,6 +101,10 @@ export type UserProfile = {
   fundingGapManwon: Extracted<number>
   budgetManwon: Extracted<number>
   experienceYears: Extracted<number>
+  /** 업력(개월). 기창업자 필수 */
+  experienceMonths: Extracted<number>
+  /** 기창업자는 사업장 구, 예비창업자는 창업 예정 구 (필수) */
+  bizSigungu: Extracted<string>
   freeText: string
 }
 

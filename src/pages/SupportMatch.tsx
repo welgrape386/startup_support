@@ -28,12 +28,12 @@ export function SupportMatch() {
   const tooShort = len > 0 && len < MIN_TEXT_LENGTH
   // 입력하는 동안 규칙 파서가 읽은 항목을 보여줘서 빠진 정보를 바로 알 수 있게 한다
   const p = ruleProfile(text, undefined)
-  // 필수 정보 되묻기 (회의 결정): 만 나이, 거주지(서울 구). 비면 제출을 막고 무엇이 빠졌는지 알려준다
+  // 필수 정보 (회의 결정): 만 나이, 거주지(서울 구). 비어 있어도 찾기는 되고, 빠진 정보는 아래에 알려준다
   const missing = [
     !p.age.value && '나이(만 나이, 예: 27살)',
     !p.sigungu.value && '거주지 구(서울 기준, 예: 마포구)',
   ].filter((x): x is string => Boolean(x))
-  const canSubmit = !inputError(text) && len >= MIN_TEXT_LENGTH && missing.length === 0
+  const canSubmit = !inputError(text) && len >= MIN_TEXT_LENGTH
   const read = [
     { label: '나이', value: p.age.value != null ? `${p.age.value}세` : null },
     { label: '지역', value: p.sido.value ? [shortSido(p.sido.value), p.sigungu.value].filter(Boolean).join(' ') : null },

@@ -66,6 +66,8 @@ function profile(p: {
     fundingGapManwon: { value: null },
     budgetManwon: { value: null },
     experienceYears: { value: null },
+    experienceMonths: { value: null },
+    bizSigungu: { value: null },
     freeText: '',
   }
 }

@@ -59,6 +59,20 @@ export function extractCategory(text: string): string | null {
   return null
 }
 
+/** 업력을 개월로. "업력 2년", "3개월 차" 같은 명시된 표현만 읽는다 (추정하지 않음) */
+export function extractExperienceMonths(text: string): number | null {
+  const m = text.match(/업력\s*(\d+)\s*(개월|년)/) ?? text.match(/(\d+)\s*(개월|년)\s*(째|차|된|운영|영업)/)
+  if (!m) return null
+  return m[2] === '년' ? Number(m[1]) * 12 : Number(m[1])
+}
+
+const BIZ_PLACE = '사업장|영업장|매장|가게|점포|카페|식당|음식점'
+/** 사업장(가게)과 같은 문장에 붙은 구만 읽는다. 거주지 구와 섞이지 않도록 장소 단어가 있을 때만 */
+export function extractBizGu(text: string): string | null {
+  const m = text.match(new RegExp(`(?:${BIZ_PLACE})[^.\\n]{0,15}?([가-힣]{1,4}구)|([가-힣]{1,4}구)[^.\\n]{0,15}?(?:${BIZ_PLACE})`))
+  return m ? (m[1] ?? m[2] ?? null) : null
+}
+
 /** 규칙만으로 만든 프로필 (LLM 없음). 입력 화면의 실시간 칩과 샘플 응답이 같이 쓴다 */
 export function ruleProfile(raw: string, overrides: SupportMatchRequest['overrides']): UserProfile {
   // 초안의 빈칸([나이], [예비창업자/사업자] 등)은 사용자가 쓴 정보가 아니므로 읽지 않는다
@@ -87,6 +101,9 @@ export function ruleProfile(raw: string, overrides: SupportMatchRequest['overrid
     fundingGapManwon: { value: extractManwon(text) },
     budgetManwon: { value: null },
     experienceYears: { value: null },
+    experienceMonths: { value: 'experienceMonths' in o ? ((o.experienceMonths as number | null) ?? null) : extractExperienceMonths(text) },
+    // 칩으로 고친 사업장 구가 우선. 시도만 고치면 문장 속 구는 비운다 (시군구와 같은 규칙)
+    bizSigungu: { value: 'bizSigungu' in o ? ((o.bizSigungu as string | null) ?? null) : o.sido ? null : extractBizGu(text) },
     freeText: raw,
   }
 }
