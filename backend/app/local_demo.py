@@ -10,6 +10,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session, selectinload
 from app.models import Announcement, AnnouncementFile
 from app.schemas import SupportMatchRequest
+from app.rag_search import search_ranked, TOP_K
 
 LOCAL_DEMO_NOTICE = '실제 공고 검색(단순 키워드) 데모입니다. 공고별 자격 조건 판정 AI가 아직 연결되지 않아 신청 가능 여부는 모두 확인 필요입니다.'
 REGIONS = [('서울','서울특별시'),('인천','인천광역시'),('경기','경기도'),('부산','부산광역시'),('대구','대구광역시'),('대전','대전광역시'),('광주','광주광역시'),('울산','울산광역시'),('세종','세종특별자치시'),('강원','강원특별자치도'),('충북','충청북도'),('충남','충청남도'),('충청북','충청북도'),('충청남','충청남도'),('전북','전북특별자치도'),('전남','전라남도'),('경북','경상북도'),('경남','경상남도'),('제주','제주특별자치도')]
@@ -181,7 +182,7 @@ def _program(a, today):
     if a.application_url:data['applyUrl']=a.application_url
     return data
 
-def get_match_response(request: SupportMatchRequest, session: Session, limit=12, as_of=None, extracted=None):
+def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP_K, as_of=None, extracted=None):
     today=as_of or date.today()
     profile,missing=get_profile(request.text,request.overrides)
     # Keep original UI profile shape; let AI fill available values when enabled.
@@ -234,17 +235,30 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=12,
         s=_score(a,terms,profile)
         active.append((s,a))
     active.sort(key=lambda pair:(pair[0], pair[1].apply_end or date.max),reverse=True)
+    # RAG 검색 순위가 있으면 그 순서를 쓴다. 자격 판정이 아니라 관련도 순서만 준다.
+    # 지역·마감 필터는 위에서 이미 적용된 active 안에서만 고른다. RAG 결과가 없으면 키워드 순서로 간다.
+    user_gu = profile['sigungu']['value'] if profile['sido']['value'] in (None, '서울특별시', '서울') else ''
+    rag = search_ranked(request.text, user_gu=user_gu)
+    rag_rank = {r['pblancId']: r for r in rag} if rag else {}
+    ranked = sorted([(s, a) for s, a in active if a.announcement_id in rag_rank],
+                    key=lambda pair: rag_rank[pair[1].announcement_id]['rank'])
+    # 필터 이후 상위 TOP_K개만 판정으로 넘긴다 (RAG는 POOL개를 받아 둠)
+    ranked = ranked[:TOP_K]
     # Return meaningful matches, but also allow general requests to see examples.
-    candidates=[(score,a) for score,a in active if score>0]
-    if not candidates:candidates=active
+    if ranked:
+        candidates = ranked
+    else:
+        candidates=[(score,a) for score,a in active if score>0]
+        if not candidates:candidates=active
     results=[]
     for score,a in candidates[:limit]:
         program=_program(a,today)
         # Score is a *display relevance* score, NOT an eligibility confidence probability.
         percent=max(1,min(80,20+score))
         days=(a.apply_end-today).days if a.apply_end else None
+        search_rank = rag_rank[a.announcement_id]['rank'] if a.announcement_id in rag_rank else None
         results.append({
-          'program':program,'verdict':'확인 필요','score':percent,'searchScore':float(score),'judgmentScore':None,'rules':[],
+          'program':program,'verdict':'확인 필요','score':percent,'searchScore':float(score),'searchRank':search_rank,'judgmentScore':None,'rules':[],
           'headline':'관련 공고 검색됨 · 신청자격 확인 필요',
           'reasons':[],'cautions':[], 'exceptions':[], 'daysLeft':days
         })
