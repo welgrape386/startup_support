@@ -36,13 +36,13 @@ def _load():
     return _loaded
 
 
-def search_ranked(query, user_gu=''):
+def search_ranked(query, user_gu='', stage='', need='', industry='', age=''):
     """[{pblancId, rank, score, evidence, evidence_from}, ...] 또는 실패 시 None."""
     if not query or not _load():
         return None
     try:
         from search_service import search
-        return search(query, user_gu=user_gu or '', k=max(POOL, TOP_K))
+        return search(query, user_gu=user_gu or '', k=max(POOL, TOP_K), stage=stage or '', need=need or '', industry=industry or '', age=age or '')
     except Exception as e:
         log.warning('RAG 검색 중 오류, 키워드 검색으로 대체합니다: %s', e)
         return None

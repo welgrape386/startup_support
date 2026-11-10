@@ -146,6 +146,9 @@ def _card_summary(text):
     whole='\n'.join(lines)
     return whole if len(whole)<=CARD_SUMMARY_MAX else lines[-1]
 
+# 판정 기준일: 공고 데이터 스냅샷 날짜 (팀 회의 결정). 마감 판단을 오늘 날짜가 아니라 이 날짜로 한다
+JUDGE_AS_OF = date(2026, 10, 16)
+
 def _program(a, today):
     raw=a.raw_fields or {}
     fields={
@@ -183,7 +186,7 @@ def _program(a, today):
     return data
 
 def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP_K, as_of=None, extracted=None):
-    today=as_of or date.today()
+    today=as_of or JUDGE_AS_OF
     profile,missing=get_profile(request.text,request.overrides)
     # Keep original UI profile shape; let AI fill available values when enabled.
     ai_terms = ''
@@ -238,7 +241,16 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
     # RAG 검색 순위가 있으면 그 순서를 쓴다. 자격 판정이 아니라 관련도 순서만 준다.
     # 지역·마감 필터는 위에서 이미 적용된 active 안에서만 고른다. RAG 결과가 없으면 키워드 순서로 간다.
     user_gu = profile['sigungu']['value'] if profile['sido']['value'] in (None, '서울특별시', '서울') else ''
-    rag = search_ranked(request.text, user_gu=user_gu)
+    # 추출 결과가 있을 때만 검색 조건으로 넘긴다. 없으면 빈 값 (그 조건은 검색에서 빠짐)
+    sx={}
+    if extracted is not None:
+        sd=extracted.get('검색정보') or {}; ex=extracted.get('추가추출값') or {}
+        nd=sd.get('필요지원') or []
+        sx=dict(stage=ex.get('창업단계_언급') if ex.get('창업단계_언급') in ('예비','개업') else '',
+                need=(nd[0] if isinstance(nd,list) and nd else (nd if isinstance(nd,str) else '')),
+                industry=sd.get('업종원문표현') or '',
+                age=str(ex.get('나이_언급') or ''))
+    rag = search_ranked(request.text, user_gu=user_gu, **sx)
     rag_rank = {r['pblancId']: r for r in rag} if rag else {}
     ranked = sorted([(s, a) for s, a in active if a.announcement_id in rag_rank],
                     key=lambda pair: rag_rank[pair[1].announcement_id]['rank'])
