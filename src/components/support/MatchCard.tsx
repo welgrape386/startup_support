@@ -17,7 +17,7 @@ const DAY_BASE = 'inline-flex items-center rounded-chip px-2.5 py-1 text-xs font
 function DayBadge({ daysLeft, unknownPeriod }: { daysLeft: number | null; unknownPeriod?: boolean }) {
   const [cls, text] =
     unknownPeriod
-      ? ['bg-bg-soft text-muted', '기간 확인 필요']
+      ? ['bg-surface text-muted ring-1 ring-inset ring-line', '기간 확인 필요']
     : daysLeft == null
       ? ['bg-info-soft text-primary-600', '상시 모집']
       : daysLeft <= 3
@@ -31,7 +31,7 @@ function DayBadge({ daysLeft, unknownPeriod }: { daysLeft: number | null; unknow
 // A. 신호등 4종 (명세 6-A). 라벨은 VerdictTabs 상수를 함께 쓴다. head = 카드 상단 판정 헤더 색 (글자 대비 4.7 이상)
 const VERDICT: Record<MatchVerdict, { tone: 'pos' | 'neutral' | 'warn' | 'neg'; head: string }> = {
   '자격 충족': { tone: 'pos', head: 'bg-pos-soft text-pos' },
-  '확인 필요': { tone: 'neutral', head: 'bg-bg-soft text-muted' },
+  '확인 필요': { tone: 'neutral', head: 'bg-surface text-muted' },
   조건부: { tone: 'warn', head: 'bg-warn-soft text-warn' },
   '자격 미달': { tone: 'neg', head: 'bg-neg-soft text-neg' },
 }
