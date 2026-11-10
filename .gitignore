@@ -8,3 +8,7 @@ data/raw/*
 data/programs.index.json
 *.tsbuildinfo
 !data/raw/manual/
+
+# Python 캐시 (실행 시 자동 생성)
+__pycache__/
+*.pyc

@@ -10,6 +10,7 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import Session, selectinload
 from app.models import Announcement, AnnouncementFile
 from app.schemas import SupportMatchRequest
+from app.rag_search import search_ranked, TOP_K
 
 LOCAL_DEMO_NOTICE = '실제 공고 검색(단순 키워드) 데모입니다. 공고별 자격 조건 판정 AI가 아직 연결되지 않아 신청 가능 여부는 모두 확인 필요입니다.'
 REGIONS = [('서울','서울특별시'),('인천','인천광역시'),('경기','경기도'),('부산','부산광역시'),('대구','대구광역시'),('대전','대전광역시'),('광주','광주광역시'),('울산','울산광역시'),('세종','세종특별자치시'),('강원','강원특별자치도'),('충북','충청북도'),('충남','충청남도'),('충청북','충청북도'),('충청남','충청남도'),('전북','전북특별자치도'),('전남','전라남도'),('경북','경상북도'),('경남','경상남도'),('제주','제주특별자치도')]
@@ -129,6 +130,29 @@ def _short_summary(text, limit=80):
         s=(cut[:cut.rfind(' ')] if ' ' in cut[20:] else cut).rstrip(' ,.') + '…'
     return s
 
+# 카드 요약: ☞ 줄 두 개(대상 + 지원 내용)가 이 글자 수 안이면 둘 다 보이고, 넘으면 지원 내용 줄만 보인다.
+CARD_SUMMARY_MAX = 70
+
+def _card_summary(text):
+    """카드용 요약: '☞' 안내 줄만 모은다. 짧으면 전부, 길면 마지막 ☞ 줄(지원 내용)만. ☞ 줄이 없으면 머리말 요약."""
+    if not text: return ''
+    lines=[]
+    for ln in text.splitlines():
+        ln=ln.replace('\xa0',' ').strip()
+        if ln.startswith('☞'):
+            t=ln[1:].strip()
+            if t: lines.append(t)
+    if not lines: return _short_summary(text)
+    whole='\n'.join(lines)
+    return whole if len(whole)<=CARD_SUMMARY_MAX else lines[-1]
+
+# 판정 기준일: 공고 데이터 스냅샷 날짜 (팀 회의 결정). 마감 판단을 오늘 날짜가 아니라 이 날짜로 한다
+JUDGE_AS_OF = date(2026, 10, 16)
+
+def _is_rolling(a):
+    """상시·연중·수시로 적힌 공고만 상시 모집. 제목에 '수시'만 있고 신청기간이 날짜·문장이면 상시가 아니다."""
+    return bool(a.rolling and a.application_period_raw and re.search(r'상시\s*접수|연중|수시', a.application_period_raw))
+
 def _program(a, today):
     raw=a.raw_fields or {}
     fields={
@@ -141,14 +165,15 @@ def _program(a, today):
     for k,v in raw.items():
         if isinstance(v,str) and v:fields[k]=v
     status = ('마감' if a.apply_end and a.apply_end < today else
-              '모집예정' if a.apply_start and a.apply_start>today else '모집중')
+              '모집예정' if a.apply_start and a.apply_start>today else
+              '모집중' if (a.apply_end or _is_rolling(a)) else '기간 확인 필요')
     files=[{'name':f.file_name or '첨부파일','url':f.file_url} for f in sorted(a.files,key=lambda f:(f.file_role,f.sequence))]
     data={
       'id':a.announcement_id,'source':'bizinfo','portal':'기업마당',
       'sourceId':a.announcement_id,'title':a.title,'agency':a.agency or '기관 정보 미상',
       'supportTypes':_support_types(a),'support_types':a.support_types or [],'rolling':a.rolling,'status':status,
       'duplicatePolicy':{'status':'미확인'},
-      'summary':_short_summary(a.summary) or a.title,'url':a.announcement_url or '',
+      'summary':_card_summary(a.summary) or a.title,'url':a.announcement_url or '',
       'fields':fields,'fetchedAt':(a.fetched_updated_at or a.fetched_created_at or today.isoformat())[:10],
       'reviewed':False,'attachmentFiles':files,
     }
@@ -165,8 +190,8 @@ def _program(a, today):
     if a.application_url:data['applyUrl']=a.application_url
     return data
 
-def get_match_response(request: SupportMatchRequest, session: Session, limit=12, as_of=None, extracted=None):
-    today=as_of or date.today()
+def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP_K, as_of=None, extracted=None):
+    today=as_of or JUDGE_AS_OF
     profile,missing=get_profile(request.text,request.overrides)
     # Keep original UI profile shape; let AI fill available values when enabled.
     ai_terms = ''
@@ -213,22 +238,43 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=12,
         if a.apply_end is not None:
             if a.apply_start and a.apply_start>today:continue
             if a.apply_end < today:continue
-        elif not (a.rolling and a.application_period_raw and re.search(r'상시\s*접수|연중|수시',a.application_period_raw)):
-            continue
+        # 날짜가 없는 공고(예산 소진시까지 등)는 빼지 않고 '기간 확인 필요'로 보여준다
         s=_score(a,terms,profile)
         active.append((s,a))
     active.sort(key=lambda pair:(pair[0], pair[1].apply_end or date.max),reverse=True)
+    # RAG 검색 순위가 있으면 그 순서를 쓴다. 자격 판정이 아니라 관련도 순서만 준다.
+    # 지역·마감 필터는 위에서 이미 적용된 active 안에서만 고른다. RAG 결과가 없으면 키워드 순서로 간다.
+    user_gu = profile['sigungu']['value'] if profile['sido']['value'] in (None, '서울특별시', '서울') else ''
+    # 추출 결과가 있을 때만 검색 조건으로 넘긴다. 없으면 빈 값 (그 조건은 검색에서 빠짐)
+    sx={}
+    if extracted is not None:
+        sd=extracted.get('검색정보') or {}; ex=extracted.get('추가추출값') or {}
+        nd=sd.get('필요지원') or []
+        sx=dict(stage=ex.get('창업단계_언급') if ex.get('창업단계_언급') in ('예비','개업') else '',
+                need=(nd[0] if isinstance(nd,list) and nd else (nd if isinstance(nd,str) else '')),
+                industry=sd.get('업종원문표현') or '',
+                age=str(ex.get('나이_언급') or ''))
+    rag = search_ranked(request.text, user_gu=user_gu, **sx)
+    rag_rank = {r['pblancId']: r for r in rag} if rag else {}
+    ranked = sorted([(s, a) for s, a in active if a.announcement_id in rag_rank],
+                    key=lambda pair: rag_rank[pair[1].announcement_id]['rank'])
+    # 필터 이후 상위 TOP_K개만 판정으로 넘긴다 (RAG는 POOL개를 받아 둠)
+    ranked = ranked[:TOP_K]
     # Return meaningful matches, but also allow general requests to see examples.
-    candidates=[(score,a) for score,a in active if score>0]
-    if not candidates:candidates=active
+    if ranked:
+        candidates = ranked
+    else:
+        candidates=[(score,a) for score,a in active if score>0]
+        if not candidates:candidates=active
     results=[]
     for score,a in candidates[:limit]:
         program=_program(a,today)
         # Score is a *display relevance* score, NOT an eligibility confidence probability.
         percent=max(1,min(80,20+score))
         days=(a.apply_end-today).days if a.apply_end else None
+        search_rank = rag_rank[a.announcement_id]['rank'] if a.announcement_id in rag_rank else None
         results.append({
-          'program':program,'verdict':'확인 필요','score':percent,'searchScore':float(score),'judgmentScore':None,'rules':[],
+          'program':program,'verdict':'확인 필요','score':percent,'searchScore':float(score),'searchRank':search_rank,'judgmentScore':None,'rules':[],
           'headline':'관련 공고 검색됨 · 신청자격 확인 필요',
           'reasons':[],'cautions':[], 'exceptions':[], 'daysLeft':days
         })
