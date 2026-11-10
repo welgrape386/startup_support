@@ -57,7 +57,7 @@ export type SupportProgram = {
   applyEnd?: string
   /** 연중·수시 모집 → daysLeft=null, "상시 모집" */
   rolling: boolean
-  status: '모집중' | '모집예정' | '마감'
+  status: '모집중' | '모집예정' | '마감' | '기간 확인 필요'
   eligibility: RuleGroup[]
   duplicatePolicy: DuplicatePolicy
   summary: string

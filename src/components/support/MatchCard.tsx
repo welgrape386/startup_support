@@ -14,9 +14,11 @@ const won = (m: number) =>
 
 // D-day 는 모양을 고정한다. 공통 Badge 가 바뀌어도 따라가지 않도록 클래스를 여기 둔다
 const DAY_BASE = 'inline-flex items-center rounded-chip px-2.5 py-1 text-xs font-semibold whitespace-nowrap'
-function DayBadge({ daysLeft }: { daysLeft: number | null }) {
+function DayBadge({ daysLeft, unknownPeriod }: { daysLeft: number | null; unknownPeriod?: boolean }) {
   const [cls, text] =
-    daysLeft == null
+    unknownPeriod
+      ? ['bg-bg-soft text-muted', '기간 확인 필요']
+    : daysLeft == null
       ? ['bg-info-soft text-primary-600', '상시 모집']
       : daysLeft <= 3
         ? ['bg-neg-soft text-neg', `D-${daysLeft}`]
@@ -73,7 +75,7 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
       </div>
       <div className="flex flex-1 flex-col gap-4 p-6">
         <div className="flex flex-wrap items-center gap-2">
-          <DayBadge daysLeft={r.daysLeft} />
+          <DayBadge daysLeft={r.daysLeft} unknownPeriod={p.status === '기간 확인 필요'} />
           {p.supportTypes.map((t) => (
             <Badge key={t} tone={t === '융자' ? 'violet' : 'info'}>
               {t}
