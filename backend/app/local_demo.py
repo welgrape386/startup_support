@@ -161,7 +161,8 @@ def _program(a, today):
     for k,v in raw.items():
         if isinstance(v,str) and v:fields[k]=v
     status = ('마감' if a.apply_end and a.apply_end < today else
-              '모집예정' if a.apply_start and a.apply_start>today else '모집중')
+              '모집예정' if a.apply_start and a.apply_start>today else
+              '모집중' if (a.apply_end or a.rolling) else '기간 확인 필요')
     files=[{'name':f.file_name or '첨부파일','url':f.file_url} for f in sorted(a.files,key=lambda f:(f.file_role,f.sequence))]
     data={
       'id':a.announcement_id,'source':'bizinfo','portal':'기업마당',
@@ -233,8 +234,7 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         if a.apply_end is not None:
             if a.apply_start and a.apply_start>today:continue
             if a.apply_end < today:continue
-        elif not (a.rolling and a.application_period_raw and re.search(r'상시\s*접수|연중|수시',a.application_period_raw)):
-            continue
+        # 날짜가 없는 공고(예산 소진시까지 등)는 빼지 않고 '기간 확인 필요'로 보여준다
         s=_score(a,terms,profile)
         active.append((s,a))
     active.sort(key=lambda pair:(pair[0], pair[1].apply_end or date.max),reverse=True)
