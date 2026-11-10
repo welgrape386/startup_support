@@ -124,8 +124,8 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
     sido: profile.sido.value,
     sigungu: profile.sigungu.value,
     bizStage: profile.bizStage.value,
-    experienceMonths: profile.experienceMonths.value,
-    bizSigungu: profile.bizSigungu.value,
+    experienceMonths: profile.experienceMonths?.value ?? null,
+    bizSigungu: profile.bizSigungu?.value ?? null,
   }
   // 저장 전 변경값. 저장하면 비우고, 재판정 결과의 profile 이 새 값이 된다
   const [pending, setPending] = useState<Partial<Values>>({})

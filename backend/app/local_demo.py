@@ -52,6 +52,13 @@ def get_profile(text: str, overrides: dict | None):
     age=override('age',age)
     sido_new=override('sido',sido)
     if sido_new!=sido:sigungu=None
+    # 업력(개월): "업력 2년", "14개월 차"처럼 명시된 표현만 읽는다
+    m_exp=re.search(r'업력\s*(\d+)\s*(개월|년)',txt) or re.search(r'(\d+)\s*(개월|년)\s*(?:째|차|된|운영|영업)',txt)
+    exp_months=(int(m_exp.group(1))*12 if m_exp.group(2)=='년' else int(m_exp.group(1))) if m_exp else None
+    # 사업장 구: 가게·매장 같은 장소 단어와 같은 문장에 붙은 구만 읽는다
+    BIZ='사업장|영업장|매장|가게|점포|카페|식당|음식점'
+    m_biz=re.search(rf'(?:{BIZ})[^.\n]{{0,15}}?([가-힣]{{1,4}}구)|([가-힣]{{1,4}}구)[^.\n]{{0,15}}?(?:{BIZ})',txt)
+    biz_gu=(m_biz.group(1) or m_biz.group(2)) if m_biz else None
     # The new profile chip editor can replace age; derived groups must use the
     # edited value, not the originally parsed one.
     groups=['청년'] if age is not None and age<=39 else []
@@ -64,9 +71,16 @@ def get_profile(text: str, overrides: dict | None):
        'industryCategory':_extracted(override('industryCategory',category)),
        'industryText':_extracted(None),'targetGroups':groups,'needs':needs,
        'fundingGapManwon':_extracted(fund),'budgetManwon':_extracted(None),
-       'experienceYears':_extracted(None),'freeText':text
+       'experienceYears':_extracted(None),
+       'experienceMonths':_extracted(override('experienceMonths',exp_months)),
+       'bizSigungu':_extracted(override('bizSigungu', None if 'sido' in o else biz_gu)),
+       'freeText':text
     }
-    missing=[k for k in ('age','sido','bizStage','industryCategory') if profile[k]['value'] is None]
+    # 필수 항목 (프론트 required.ts 와 같다): 공통 나이·거주지 구·창업 단계, 기창업 +업력·사업장 구, 예비창업 +창업 예정 구
+    required=['age','sigungu','bizStage']
+    if profile['bizStage']['value']=='예비창업': required+=['bizSigungu']
+    elif profile['bizStage']['value']: required+=['experienceMonths','bizSigungu']
+    missing=[k for k in required if profile[k]['value'] in (None,'')]
     return profile,missing
 
 def _terms(text):
