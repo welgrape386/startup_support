@@ -149,6 +149,10 @@ def _card_summary(text):
 # 판정 기준일: 공고 데이터 스냅샷 날짜 (팀 회의 결정). 마감 판단을 오늘 날짜가 아니라 이 날짜로 한다
 JUDGE_AS_OF = date(2026, 10, 16)
 
+def _is_rolling(a):
+    """상시·연중·수시로 적힌 공고만 상시 모집. 제목에 '수시'만 있고 신청기간이 날짜·문장이면 상시가 아니다."""
+    return bool(a.rolling and a.application_period_raw and re.search(r'상시\s*접수|연중|수시', a.application_period_raw))
+
 def _program(a, today):
     raw=a.raw_fields or {}
     fields={
@@ -162,7 +166,7 @@ def _program(a, today):
         if isinstance(v,str) and v:fields[k]=v
     status = ('마감' if a.apply_end and a.apply_end < today else
               '모집예정' if a.apply_start and a.apply_start>today else
-              '모집중' if (a.apply_end or a.rolling) else '기간 확인 필요')
+              '모집중' if (a.apply_end or _is_rolling(a)) else '기간 확인 필요')
     files=[{'name':f.file_name or '첨부파일','url':f.file_url} for f in sorted(a.files,key=lambda f:(f.file_role,f.sequence))]
     data={
       'id':a.announcement_id,'source':'bizinfo','portal':'기업마당',
