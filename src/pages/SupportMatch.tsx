@@ -74,15 +74,15 @@ export function SupportMatch() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-primary-600 px-2.5 py-0.5 text-xs font-bold text-white">필수</span>
-            <p className="text-sm leading-relaxed text-ink">만 나이, 거주지(서울 구)</p>
+            <p className="text-[13px] leading-relaxed text-ink">만 나이, 거주지(서울 구)</p>
           </div>
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">기존 창업자</span>
-            <p className="text-sm leading-relaxed text-ink">업력(개월 수), 사업장 구</p>
+            <p className="text-[13px] leading-relaxed text-ink">업력(개월 수), 사업장 구</p>
           </div>
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">예비 창업자</span>
-            <p className="text-sm leading-relaxed text-ink">창업 예정 구</p>
+            <p className="text-[13px] leading-relaxed text-ink">창업 예정 구</p>
           </div>
         </div>
         <div className="flex flex-col gap-1.5 rounded-panel border border-primary-100 bg-surface px-4 py-3">
