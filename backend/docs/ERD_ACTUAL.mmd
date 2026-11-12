@@ -1,0 +1,171 @@
+erDiagram
+    match_results ||--o{ condition_checks : "result_id"
+    conditions ||--o{ condition_checks : "condition_id"
+    announcements ||--o{ conditions : "announcement_id"
+    announcements ||--o{ files : "announcement_id"
+    match_runs ||--o{ match_results : "run_id"
+    announcements ||--o{ match_results : "announcement_id"
+    user_requests ||--o{ match_runs : "request_id"
+    announcements ||--o{ texts : "announcement_id"
+    files ||--o{ texts : "file_id"
+    announcements {
+        VARCHAR_32 announcement_id PK
+        VARCHAR_30 source
+        TEXT title
+        TEXT agency
+        TEXT operator
+        VARCHAR_100 category_large
+        VARCHAR_100 category_medium
+        TEXT target_name
+        TEXT summary
+        TEXT hashtags
+        TEXT application_period_raw
+        DATE apply_start
+        DATE apply_end
+        BOOLEAN rolling
+        TEXT application_method
+        TEXT announcement_url
+        TEXT application_url
+        TEXT contact
+        VARCHAR_30 fetched_created_at
+        VARCHAR_30 fetched_updated_at
+        JSON raw_fields
+        JSON support_types
+        INTEGER amount_max_manwon
+        TEXT total_budget_text
+        VARCHAR_120 interest_rate
+        TEXT support_detail
+        VARCHAR_30 status
+        JSON duplicate_policy_json
+        JSON submission_docs_json
+        JSON bonus_points_json
+        JSON rounds_json
+        BOOLEAN reviewed
+        DATETIME collected_at
+        VARCHAR_20 region
+        TEXT seoul_gu
+        BOOLEAN has_text
+        TEXT 카테고리
+        INTEGER 자금
+        INTEGER 교육_컨설팅
+        INTEGER 공간_시설
+        INTEGER 홍보_판매
+        INTEGER 인력
+        INTEGER 기술개발
+        INTEGER 해외진출
+        INTEGER 제도_인증
+        INTEGER 기타
+    }
+    condition_checks {
+        INTEGER check_id PK
+        INTEGER result_id FK
+        INTEGER condition_id FK
+        VARCHAR_255 condition_path
+        VARCHAR_30 check_status
+        JSON user_value_json
+        JSON required_value_json
+        TEXT reason
+        TEXT evidence_quote
+        BOOLEAN evidence_verified
+        INTEGER evidence_start
+        INTEGER evidence_end
+        DATETIME created_at
+    }
+    conditions {
+        INTEGER condition_id PK
+        VARCHAR_32 announcement_id FK
+        VARCHAR_20 schema_version
+        JSON condition_json
+        VARCHAR_70 sido
+        VARCHAR_60 business_registration
+        INTEGER max_startup_months
+        INTEGER max_age
+        VARCHAR_30 extraction_status
+        DATETIME extracted_at
+        INTEGER source_text_id
+        VARCHAR_100 model_name
+        VARCHAR_50 prompt_version
+        VARCHAR_30 quote_validation_status
+    }
+    files {
+        INTEGER file_id PK
+        VARCHAR_32 announcement_id FK
+        TEXT file_name
+        TEXT file_url
+        VARCHAR_16 file_type
+        VARCHAR_30 file_role
+        INTEGER sequence
+        VARCHAR_32 download_status
+    }
+    match_results {
+        INTEGER result_id PK
+        INTEGER run_id FK
+        VARCHAR_32 announcement_id FK
+        VARCHAR_30 verdict
+        VARCHAR_30 verdict_source
+        FLOAT score
+        INTEGER rank_number
+        TEXT headline
+        JSON reasons_json
+        JSON cautions_json
+        JSON exceptions_json
+        DATETIME created_at
+        FLOAT search_score
+        FLOAT judgment_score
+    }
+    match_runs {
+        INTEGER run_id PK
+        INTEGER request_id FK
+        VARCHAR_30 execution_status
+        VARCHAR_40 data_source
+        VARCHAR_100 model_name
+        VARCHAR_50 prompt_version
+        VARCHAR_40 search_version
+        VARCHAR_40 judge_version
+        VARCHAR_40 parser_version
+        VARCHAR_20 schema_version
+        VARCHAR_80 data_snapshot
+        INTEGER processing_time_ms
+        INTEGER input_tokens
+        INTEGER output_tokens
+        FLOAT estimated_cost
+        VARCHAR_10 cost_currency
+        JSON summary_json
+        JSON coverage_json
+        DATETIME started_at
+        DATETIME completed_at
+    }
+    texts {
+        INTEGER text_id PK
+        VARCHAR_32 announcement_id FK
+        TEXT content
+        VARCHAR_20 source_format
+        TEXT source_file_name
+        VARCHAR_80 extraction_status
+        BOOLEAN suspected_incomplete
+        TEXT extraction_error
+        DATETIME extracted_at
+        INTEGER file_id FK
+        BOOLEAN is_primary
+        VARCHAR_30 source_kind
+        VARCHAR_100 section_name
+    }
+    user_requests {
+        INTEGER request_id PK
+        TEXT input_text
+        JSON profile_json
+        INTEGER age
+        VARCHAR_70 sido
+        VARCHAR_70 sigungu
+        VARCHAR_40 biz_stage
+        JSON industry_ksic_json
+        JSON needs_json
+        DATETIME created_at
+        INTEGER startup_months
+        VARCHAR_20 gender
+        BOOLEAN is_registered
+        VARCHAR_50 startup_stage
+        VARCHAR_255 business_type
+        VARCHAR_100 needed_support
+        INTEGER funding_gap
+    }
