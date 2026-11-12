@@ -185,7 +185,8 @@ def _program(a, today):
     return data
 
 def get_match_response(request: SupportMatchRequest, session: Session, limit=12, as_of=None, extracted=None):
-    today=as_of or date.today()
+    # 판정 기준일 고정 (나애 요청 2026-11-12: 공고 데이터 기준일 10/16)
+    today=as_of or date(2026,10,16)
     profile,missing=get_profile(request.text,request.overrides)
     # Keep original UI profile shape; let AI fill available values when enabled.
     ai_terms = ''

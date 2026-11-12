@@ -7,7 +7,7 @@
 
 import { ruleProfile } from '@/lib/parse'
 import { verifiedDuplicatePolicy, exceptionClauses } from './clauses'
-import { kstDate, partition } from './eligibility'
+import { JUDGE_DATE, partition } from './eligibility'
 import { mockPrograms } from './mock'
 import { daysLeft, scoreMatch, sortResults } from './score'
 import type {
@@ -202,7 +202,7 @@ export function buildUiPlaceholder(
   text: string,
   overrides: SupportMatchRequest['overrides'],
 ): SupportMatchResponse {
-  const today = kstDate(new Date())
+  const today = JUDGE_DATE
   const profile = ruleProfile(text, overrides)
   const programs = [...mockPrograms(today), bojeungSample(today), ...screenSamples(today)].map((p) => ({
     ...p,
