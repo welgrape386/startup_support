@@ -76,20 +76,37 @@ export function SupportMatch() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-primary-600 px-2.5 py-0.5 text-xs font-bold text-white">필수</span>
-            <p className="text-[13px] leading-relaxed text-ink">만 나이, 거주지 구, 창업 단계, 업종</p>
+            <ul className="text-[13px] leading-relaxed text-ink space-y-0.5">
+              <li>· 나이 <span className="text-muted">(만 나이)</span></li>
+              <li>· 지역 <span className="text-muted">(거주지 구 + 사업장/창업예정 구)</span></li>
+              <li>· 창업 단계 <span className="text-muted">(기창업자/예비창업자 + 개월 수)</span></li>
+              <li>· 업종</li>
+            </ul>
           </div>
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">기존 창업자</span>
-            <p className="text-[13px] leading-relaxed text-ink">창업 단계의 개월 수, 사업장 구</p>
+            <ul className="text-[13px] leading-relaxed text-ink space-y-0.5">
+              <li>· 거주지 구</li>
+              <li>· 사업장 소재지 구</li>
+              <li>· 창업 후 개월 수 <span className="text-muted">(예: 창업 18개월째)</span></li>
+            </ul>
           </div>
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">예비 창업자</span>
-            <p className="text-[13px] leading-relaxed text-ink">창업 예정 구</p>
+            <ul className="text-[13px] leading-relaxed text-ink space-y-0.5">
+              <li>· 거주지 구</li>
+              <li>· 창업 예정 구</li>
+              <li className="text-muted text-[12px]">※ 아직 사업자 등록 전이면 개월 수 불필요</li>
+            </ul>
           </div>
         </div>
         <div className="flex flex-col gap-1.5 rounded-panel border border-primary-100 bg-surface px-4 py-3">
+          <span className="text-[12px] font-bold text-muted">추가하면 좋은 것들</span>
+          <p className="text-[13px] leading-relaxed text-ink">신청자 유형 <span className="text-muted">(개인/법인)</span>, 성별 — 해당 조건이 있는 공고에서 더 정확한 판정이 가능해요.</p>
+        </div>
+        <div className="flex flex-col gap-1.5 rounded-panel border border-primary-100 bg-surface px-4 py-3">
           <span className="text-[12px] font-bold text-muted">예시</span>
-          <p className="text-[13px] leading-relaxed text-ink">예) 만 29세이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요.</p>
+          <p className="text-[13px] leading-relaxed text-ink">예) 만 29세이고 서울 마포구에 살고 있어요. 성수동에서 디저트 카페 창업을 준비 중인 예비창업자예요.</p>
         </div>
       </Card>
 
