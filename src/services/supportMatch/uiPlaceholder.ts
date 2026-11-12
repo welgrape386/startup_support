@@ -16,11 +16,11 @@ import type {
   SupportMatchRequest,
   SupportMatchResponse,
   SupportProgram,
-  UserProfile,
 } from './types'
 import { buildSummary, coverageOf } from './summary'
 import { ruleHeadline } from './validate'
 import { nextSteps } from './whatIf'
+import { missingFields } from './required'
 
 /** "한 걸음만 더" 화면 확인용 표본. data/raw/manual/incheon-samples.json 의 소상공인보증지원을
     data/eval/rule-gold.json 정답 규칙대로 옮긴 것 (mock 3건만으로는 조건부가 생기지 않음) */
@@ -229,11 +229,7 @@ export function buildUiPlaceholder(
     }
   }
 
-  const missing: (keyof UserProfile)[] = []
-  if (profile.age.value == null) missing.push('age')
-  if (!profile.sido.value) missing.push('sido')
-  if (!profile.bizStage.value) missing.push('bizStage')
-  if (!profile.industryCategory.value) missing.push('industryCategory')
+  const missing = missingFields(profile)
 
   const results = sortResults(eligible.map(toResult))
   const conditionalResults = sortResults(conditional.map(toResult))

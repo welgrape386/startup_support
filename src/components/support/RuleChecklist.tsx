@@ -61,16 +61,18 @@ function Row({ mark, label, indent, children }: { mark: (typeof MARK)[keyof type
 /** B. 조건 체크리스트: 규칙마다 항목 · 공고 조건 · 결과 한 줄씩 (명세 6-B).
     내 입력·원문 인용·예외 조항은 화면을 깔끔하게 하려고 빼 두었다 */
 export function RuleChecklist({ rules }: { rules: RuleResult[] }) {
+  // 체크리스트는 4줄만 (나이·지역·창업 단계·업종). 보유 요건·프랜차이즈 등은 안내 영역으로 간다 (회의 결정)
+  const shown = rules.filter((x) => SHOWN_KINDS.includes(x.rule.kind))
   return (
     // 카드 크기를 크게 바꾸지 않도록 높이를 제한하고 안에서 스크롤한다
     <ul className="flex max-h-64 flex-col divide-y divide-line overflow-y-auto rounded-panel border border-line bg-surface">
-      {SHOWN_KINDS.filter((k) => !rules.some((x) => x.rule.kind === k)).map((k) => (
+      {SHOWN_KINDS.filter((k) => !shown.some((x) => x.rule.kind === k)).map((k) => (
         <li key={'missing-' + k}>
           <Row mark={MARK.unknown} label={LABEL[k]}>공고 조건 확인 필요</Row>
         </li>
       ))}
-      {rules.map((x, i) => {
-        const groupStart = x.group && rules[i - 1]?.group?.id !== x.group.id
+      {shown.map((x, i) => {
+        const groupStart = x.group && shown[i - 1]?.group?.id !== x.group.id
         return (
           <li key={x.rule.kind + x.rule.quote}>
             {groupStart && (

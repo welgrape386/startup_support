@@ -26,9 +26,14 @@ export function SupportMatch() {
   const [text, setText] = useState(() => loadInput()?.text ?? '')
   const len = text.trim().length
   const tooShort = len > 0 && len < MIN_TEXT_LENGTH
-  const canSubmit = !inputError(text) && len >= MIN_TEXT_LENGTH
   // 입력하는 동안 규칙 파서가 읽은 항목을 보여줘서 빠진 정보를 바로 알 수 있게 한다
   const p = ruleProfile(text, undefined)
+  // 필수 정보 (회의 결정): 만 나이, 거주지(서울 구). 비어 있어도 찾기는 되고, 빠진 정보는 아래에 알려준다
+  const missing = [
+    !p.age.value && '나이(만 나이, 예: 27살)',
+    !p.sigungu.value && '거주지 구(서울 기준, 예: 마포구)',
+  ].filter((x): x is string => Boolean(x))
+  const canSubmit = !inputError(text) && len >= MIN_TEXT_LENGTH
   const read = [
     { label: '나이', value: p.age.value != null ? `${p.age.value}세` : null },
     { label: '지역', value: p.sido.value ? [shortSido(p.sido.value), p.sigungu.value].filter(Boolean).join(' ') : null },
@@ -57,6 +62,34 @@ export function SupportMatch() {
         title="받을 수 있는 창업 지원사업을 찾아드릴게요"
         description="나이, 지역, 창업 단계, 필요한 지원을 편하게 적어주세요."
       />
+
+      {/* 입력 가이드: 항목별 격자 + 태그로 구분한다. 배경·테두리는 메인 "이렇게 적으면 정확해져요"와 같은 값 */}
+      <Card className="flex flex-col gap-5" style={{ background: '#f2f6ff', border: '1px solid #dbe5ff' }}>
+        <div className="flex items-center gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-info-soft text-primary-600">
+            <Icon name="info" size={18} />
+          </span>
+          <h2 className="text-[17px] font-bold text-ink">이렇게 적어 주세요</h2>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
+            <span className="w-fit rounded-chip bg-primary-600 px-2.5 py-0.5 text-xs font-bold text-white">필수</span>
+            <p className="text-[13px] leading-relaxed text-ink">만 나이, 거주지(서울 구)</p>
+          </div>
+          <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
+            <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">기존 창업자</span>
+            <p className="text-[13px] leading-relaxed text-ink">업력(개월 수), 사업장 구</p>
+          </div>
+          <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
+            <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">예비 창업자</span>
+            <p className="text-[13px] leading-relaxed text-ink">창업 예정 구</p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1.5 rounded-panel border border-primary-100 bg-surface px-4 py-3">
+          <span className="text-[12px] font-bold text-muted">예시</span>
+          <p className="text-[13px] leading-relaxed text-ink">예) 29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요.</p>
+        </div>
+      </Card>
 
       <Card className="flex flex-col gap-4">
         <div>
@@ -87,6 +120,9 @@ export function SupportMatch() {
                     </span>
                   ))}
                   {tooShort && <span className="text-warn"> · 나이, 지역, 업종을 함께 적어주세요</span>}
+                  {!tooShort && missing.length > 0 && (
+                    <span className="text-warn"> · 빠진 정보: {missing.join(', ')}</span>
+                  )}
                 </>
               )}
             </p>
@@ -109,11 +145,7 @@ export function SupportMatch() {
           ))}
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="flex items-center gap-1.5 text-[13px] text-muted">
-            <Icon name="info" size={12} />
-            나이·지역·창업 단계를 적으면 자격을 정확히 판정할 수 있어요
-          </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
           <Button size="lg" iconRight="arrow-right" onClick={submit} disabled={!canSubmit}>
             지원사업 찾기
           </Button>
