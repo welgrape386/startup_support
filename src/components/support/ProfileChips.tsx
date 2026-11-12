@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { buttonClasses } from '@/components/Button'
 import { Icon } from '@/components/Icon'
 import { cx } from '@/lib/cx'
-import { SIGUNGU } from '@/lib/regions'
+import { SIDO, SIGUNGU } from '@/lib/regions'
 import { TOP_CARD, TOP_CARD_TITLE } from './topCard'
 import type { BizStage, UserProfile } from '@/services/supportMatch/types'
 
@@ -200,14 +200,35 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
         />
       )
     if (k === 'sido') {
-      // 서울 고정: 시도는 고르지 않고 구만 입력한다 (2026-11-10 회의)
+      const sido = v.sido ?? ''
       return (
-        <GuPicker
-          sido="서울특별시"
-          value={v.sigungu}
-          autoOpen={guAuto}
-          onPick={(gu) => set({ sido: '서울특별시', sigungu: gu })}
-        />
+        <>
+          <select
+            autoFocus
+            value={sido}
+            // 시도를 바꾸면 시군구는 시도 전체로 되돌린다
+            onChange={(e) => {
+              set({ sido: e.target.value, sigungu: null })
+              setGuAuto(true)
+            }}
+            aria-label="시도"
+            className={inputCls}
+          >
+            {!sido && <option value="">시도 선택</option>}
+            {SIDO.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+          <GuPicker
+            key={sido}
+            sido={sido}
+            value={v.sigungu}
+            autoOpen={guAuto}
+            onPick={(gu) => set({ sigungu: gu })}
+          />
+        </>
       )
     }
     if (k === 'experienceMonths')
