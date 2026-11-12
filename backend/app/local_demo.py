@@ -4,7 +4,8 @@ Keyword retrieval ≠ RAG. No green/yellow/red judgments without extracted condi
 Results intentionally use '확인 필요' and meta.dataSource='mock', even though
 program names and summaries come from the real database.
 """
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 import re
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session, selectinload
@@ -161,7 +162,9 @@ def _card_summary(text):
     return whole if len(whole)<=CARD_SUMMARY_MAX else lines[-1]
 
 # 판정 기준일: 공고 데이터 스냅샷 날짜 (팀 회의 결정). 마감 판단을 오늘 날짜가 아니라 이 날짜로 한다
-JUDGE_AS_OF = date(2026, 10, 16)
+def today_kst():
+    """판정 기준일 = 오늘(서울 날짜). 서버 시계가 UTC여도 한국 날짜로 맞춘다. 자정이 지나면 마감된 공고는 자동으로 빠진다."""
+    return datetime.now(ZoneInfo('Asia/Seoul')).date()
 
 def _is_rolling(a):
     """상시·연중·수시로 적힌 공고만 상시 모집. 제목에 '수시'만 있고 신청기간이 날짜·문장이면 상시가 아니다."""
@@ -205,7 +208,7 @@ def _program(a, today):
     return data
 
 def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP_K, as_of=None, extracted=None):
-    today=as_of or JUDGE_AS_OF
+    today=as_of or today_kst()
     profile,missing=get_profile(request.text,request.overrides)
     # Keep original UI profile shape; let AI fill available values when enabled.
     ai_terms = ''
