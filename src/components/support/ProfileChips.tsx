@@ -3,6 +3,7 @@ import { buttonClasses } from '@/components/Button'
 import { Icon } from '@/components/Icon'
 import { cx } from '@/lib/cx'
 import { SIDO, SIGUNGU } from '@/lib/regions'
+import { INDUSTRY_CATEGORIES } from '@/lib/industry'
 import { TOP_CARD, TOP_CARD_TITLE } from './topCard'
 import type { BizStage, UserProfile } from '@/services/supportMatch/types'
 
@@ -19,19 +20,20 @@ type Props = {
 const BIZ_STAGES: BizStage[] = ['예비창업', '업력3년이하', '업력7년이하', '기창업']
 
 /**
- * 칩 종류. 필수 입력값(required.ts)과 맞춘다.
- * 공통: 나이, 거주지, 창업 단계 / 기창업: 업력, 사업장 구 / 예비창업: 창업 예정 구
+ * 칩 종류. 필수 입력값(required.ts)과 맞춘다 (나이·지역·창업 단계·업종).
+ * 창업 단계 칩 안에 개월 수가 들어간다 (기창업 필수, 예비창업은 0개월 자동).
+ * 지역 칩: 거주지 + 사업장 구(기창업) 또는 창업 예정 구(예비창업)
  */
-type FieldKey = 'age' | 'sido' | 'bizStage' | 'experienceMonths' | 'bizSigungu'
+type FieldKey = 'age' | 'sido' | 'bizStage' | 'bizSigungu' | 'industryCategory'
 const FIELD_LABEL: Record<FieldKey, string> = {
   age: '나이',
   sido: '거주지',
   bizStage: '창업 단계',
-  experienceMonths: '업력',
   bizSigungu: '사업장 구',
+  industryCategory: '업종',
 }
 
-/** 칩으로 고칠 수 있는 값. 거주지는 시도·시군구 두 개 */
+/** 칩으로 고칠 수 있는 값. 거주지는 시도·시군구 두 개, 창업 단계는 단계·개월 수 두 개 */
 type Values = {
   age: number | null
   sido: string | null
@@ -39,6 +41,7 @@ type Values = {
   bizStage: string | null
   experienceMonths: number | null
   bizSigungu: string | null
+  industryCategory: string | null
 }
 
 const chipBase =
@@ -126,6 +129,7 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
     bizStage: profile.bizStage.value,
     experienceMonths: profile.experienceMonths?.value ?? null,
     bizSigungu: profile.bizSigungu?.value ?? null,
+    industryCategory: profile.industryCategory?.value ?? null,
   }
   // 저장 전 변경값. 저장하면 비우고, 재판정 결과의 profile 이 새 값이 된다
   const [pending, setPending] = useState<Partial<Values>>({})
@@ -138,19 +142,29 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
   const changed = (Object.keys(pending) as (keyof Values)[]).filter((k) => pending[k] !== saved[k])
   const set = (patch: Partial<Values>) => setPending((p) => ({ ...p, ...patch }))
 
-  // 창업 단계가 정해져야 단계별 칩이 나온다 (기창업: 업력·사업장 구, 예비창업: 창업 예정 구)
+  // 창업 단계가 정해져야 사업장(예비: 창업 예정) 구 칩이 나온다. 예비창업은 개월 수가 0으로 고정된다
   const stageKnown = v.bizStage != null
   const pre = v.bizStage === '예비창업'
   const fields: FieldKey[] = [
     'age',
     'sido',
     'bizStage',
-    ...(stageKnown ? (pre ? ['bizSigungu'] : ['experienceMonths', 'bizSigungu']) : []) as FieldKey[],
+    ...(stageKnown ? ['bizSigungu' as FieldKey] : []),
+    'industryCategory',
   ]
   const label = (k: FieldKey) => (k === 'bizSigungu' ? (pre ? '창업 예정 구' : '사업장 구') : FIELD_LABEL[k])
-  const isMissing = (k: FieldKey) => missing.includes(k === 'sido' ? 'sigungu' : (k as keyof UserProfile))
+  const isMissing = (k: FieldKey) => {
+    if (k === 'sido') return missing.includes('sigungu')
+    if (k === 'bizStage')
+      return missing.includes('bizStage') || (stageKnown && !pre && missing.includes('experienceMonths'))
+    return missing.includes(k as keyof UserProfile)
+  }
   const isChanged = (k: FieldKey) =>
-    k === 'sido' ? changed.includes('sido') || changed.includes('sigungu') : changed.includes(k)
+    k === 'sido'
+      ? changed.includes('sido') || changed.includes('sigungu')
+      : k === 'bizStage'
+        ? changed.includes('bizStage') || changed.includes('experienceMonths')
+        : changed.includes(k as keyof Values)
 
   // 편집 중인 칩은 Esc 또는 바깥 클릭으로 닫는다 (고친 값은 저장 전까지 유지)
   useEffect(() => {
@@ -172,8 +186,13 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
     if (k === 'age') return v.age != null ? `${v.age}세` : null
     // 거주지는 구까지 있어야 값이 있다 (구가 빠지면 필수 항목 누락)
     if (k === 'sido') return v.sigungu ? [v.sido && shortSido(v.sido), v.sigungu].filter(Boolean).join(' ') : null
-    if (k === 'bizStage') return v.bizStage
-    if (k === 'experienceMonths') return v.experienceMonths != null ? `${v.experienceMonths}개월` : null
+    if (k === 'bizStage') {
+      if (!v.bizStage) return null
+      // 기창업은 개월 수까지 붙인다. 개월 수가 빠지면 표시로 알려준다
+      if (pre) return v.bizStage
+      return v.experienceMonths != null ? `${v.bizStage} · ${v.experienceMonths}개월` : `${v.bizStage} · 개월 수 입력`
+    }
+    if (k === 'industryCategory') return v.industryCategory
     return v.bizSigungu
   }
 
@@ -231,23 +250,6 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
         </>
       )
     }
-    if (k === 'experienceMonths')
-      return (
-        <span className="inline-flex items-center gap-1.5">
-          <input
-            autoFocus
-            type="number"
-            min={0}
-            max={1200}
-            value={v.experienceMonths ?? ''}
-            onChange={(e) => set({ experienceMonths: e.target.value === '' ? null : Number(e.target.value) })}
-            onKeyDown={(e) => e.key === 'Enter' && setEditing(null)}
-            aria-label="업력(개월)"
-            className={numberInputCls}
-          />
-          <span className="text-[13px] text-muted">개월</span>
-        </span>
-      )
     if (k === 'bizSigungu')
       return (
         <GuPicker
@@ -258,22 +260,60 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
           onPick={(gu) => set({ bizSigungu: gu })}
         />
       )
-    // 창업 단계
+    if (k === 'industryCategory')
+      return (
+        <select
+          autoFocus
+          value={v.industryCategory ?? ''}
+          onChange={(e) => set({ industryCategory: e.target.value || null })}
+          aria-label={FIELD_LABEL.industryCategory}
+          className={inputCls}
+        >
+          {!v.industryCategory && <option value="">업종 선택</option>}
+          {INDUSTRY_CATEGORIES.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+      )
+    // 창업 단계 (+ 기창업이면 개월 수). 예비창업을 고르면 개월 수는 0으로 맞춘다
     return (
-      <select
-        autoFocus
-        value={v.bizStage ?? ''}
-        onChange={(e) => set({ bizStage: e.target.value || null })}
-        aria-label={FIELD_LABEL.bizStage}
-        className={inputCls}
-      >
-        {!v.bizStage && <option value="">창업 단계 선택</option>}
-        {BIZ_STAGES.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
+      <span className="inline-flex flex-wrap items-center gap-1.5">
+        <select
+          autoFocus
+          value={v.bizStage ?? ''}
+          onChange={(e) => {
+            const next = e.target.value || null
+            set({ bizStage: next, experienceMonths: next === '예비창업' ? 0 : v.experienceMonths })
+          }}
+          aria-label={FIELD_LABEL.bizStage}
+          className={inputCls}
+        >
+          {!v.bizStage && <option value="">창업 단계 선택</option>}
+          {BIZ_STAGES.map((o) => (
+            <option key={o} value={o}>
+              {o}
+            </option>
+          ))}
+        </select>
+        {v.bizStage && !pre && (
+          <span className="inline-flex items-center gap-1.5">
+            <input
+              type="number"
+              min={0}
+              max={1200}
+              value={v.experienceMonths ?? ''}
+              placeholder="개월"
+              onChange={(e) => set({ experienceMonths: e.target.value === '' ? null : Number(e.target.value) })}
+              onKeyDown={(e) => e.key === 'Enter' && setEditing(null)}
+              aria-label="업력(개월)"
+              className={numberInputCls}
+            />
+            <span className="text-[13px] text-muted">개월</span>
+          </span>
+        )}
+      </span>
     )
   }
 

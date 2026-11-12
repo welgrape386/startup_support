@@ -13,7 +13,7 @@ import { inputError } from '@/services/supportMatch/validate'
 import { Analyzing, useSignalAnalysis } from '../../SignalComponents2'
 
 const EXAMPLES = [
-  '29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요. 인테리어 자금이 3천만원 정도 모자라요.',
+  '만 29세이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요. 인테리어 자금이 3천만원 정도 모자라요.',
   '36살, 경기도에서 음식점 창업을 준비하고 있어요. 창업 교육과 멘토링을 받고 싶어요.',
   '카페 창업을 생각 중인데 어떤 지원을 받을 수 있는지 모르겠어요.',
   '31살 예비창업자예요. 인천에서 소상공인으로 분식집을 열려고 하는데 보증 지원이 필요해요.',
@@ -28,10 +28,12 @@ export function SupportMatch() {
   const tooShort = len > 0 && len < MIN_TEXT_LENGTH
   // 입력하는 동안 규칙 파서가 읽은 항목을 보여줘서 빠진 정보를 바로 알 수 있게 한다
   const p = ruleProfile(text, undefined)
-  // 필수 정보 (회의 결정): 만 나이, 거주지(서울 구). 비어 있어도 찾기는 되고, 빠진 정보는 아래에 알려준다
+  // 필수 정보 (시스템 정리): 나이, 거주지 구, 창업 단계, 업종. 비어 있어도 찾기는 되고, 빠진 정보는 아래에 알려준다
   const missing = [
-    !p.age.value && '나이(만 나이, 예: 27살)',
+    !p.age.value && '나이(만 나이, 예: 만 27세)',
     !p.sigungu.value && '거주지 구(서울 기준, 예: 마포구)',
+    !p.bizStage.value && '창업 단계(예비창업 / 기창업)',
+    !p.industryCategory.value && '업종(예: 카페, 음식점)',
   ].filter((x): x is string => Boolean(x))
   const canSubmit = !inputError(text) && len >= MIN_TEXT_LENGTH
   const read = [
@@ -74,11 +76,11 @@ export function SupportMatch() {
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-primary-600 px-2.5 py-0.5 text-xs font-bold text-white">필수</span>
-            <p className="text-[13px] leading-relaxed text-ink">만 나이, 거주지(서울 구)</p>
+            <p className="text-[13px] leading-relaxed text-ink">만 나이, 거주지 구, 창업 단계, 업종</p>
           </div>
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">기존 창업자</span>
-            <p className="text-[13px] leading-relaxed text-ink">업력(개월 수), 사업장 구</p>
+            <p className="text-[13px] leading-relaxed text-ink">창업 단계의 개월 수, 사업장 구</p>
           </div>
           <div className="flex flex-col gap-2 rounded-panel border border-primary-100 bg-surface p-4">
             <span className="w-fit rounded-chip bg-info-soft px-2.5 py-0.5 text-xs font-bold text-primary-700">예비 창업자</span>
@@ -87,7 +89,7 @@ export function SupportMatch() {
         </div>
         <div className="flex flex-col gap-1.5 rounded-panel border border-primary-100 bg-surface px-4 py-3">
           <span className="text-[12px] font-bold text-muted">예시</span>
-          <p className="text-[13px] leading-relaxed text-ink">예) 29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요.</p>
+          <p className="text-[13px] leading-relaxed text-ink">예) 만 29세이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요.</p>
         </div>
       </Card>
 
@@ -99,7 +101,7 @@ export function SupportMatch() {
             rows={6}
             maxLength={MAX_TEXT_LENGTH}
             aria-label="내 상황"
-            placeholder="예) 29살이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요. 인테리어 자금이 3천만원 정도 모자라요."
+            placeholder="예) 만 29세이고 서울 마포구에서 디저트 카페를 준비 중인 예비창업자예요. 인테리어 자금이 3천만원 정도 모자라요."
             className="w-full rounded-input border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink-soft outline-none focus:border-primary-400"
           />
           <div className="mt-1 flex items-start justify-between gap-3">

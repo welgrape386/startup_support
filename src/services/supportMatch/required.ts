@@ -6,14 +6,14 @@ export function isPreStartup(p: UserProfile): boolean {
 }
 
 /**
- * 필수 입력값 (회의 결정: 기창업자 5개, 예비창업자 4개)
- * - 공통: 나이, 거주지 구, 창업 단계
- * - 기창업: 업력(개월), 사업장 구 추가
- * - 예비창업: 창업 예정 구 추가
- * 창업 단계를 모르면 공통 3개만 필수로 본다
+ * 필수 입력값 (시스템 정리 1번: 나이·지역·창업 단계·업종 4개가 기본)
+ * - 공통: 나이, 거주지 구, 창업 단계, 업종
+ * - 기창업: 업력(개월), 사업장 구 추가 (기창업은 개월 수 필수)
+ * - 예비창업: 창업 예정 구 추가 (업력은 0개월로 자동)
+ * 창업 단계를 모르면 공통만 필수로 본다
  */
 export function requiredFields(p: UserProfile): (keyof UserProfile)[] {
-  const common: (keyof UserProfile)[] = ['age', 'sigungu', 'bizStage']
+  const common: (keyof UserProfile)[] = ['age', 'sigungu', 'bizStage', 'industryCategory']
   if (!p.bizStage.value) return common
   return isPreStartup(p) ? [...common, 'bizSigungu'] : [...common, 'experienceMonths', 'bizSigungu']
 }
@@ -33,6 +33,7 @@ const LABEL: Partial<Record<keyof UserProfile, string>> = {
   sigungu: '거주지 구',
   bizStage: '창업 단계',
   experienceMonths: '업력(개월)',
+  industryCategory: '업종',
 }
 
 /** 화면에 보이는 항목 이름. 사업장 구는 창업 단계에 따라 '창업 예정 구'가 된다 */

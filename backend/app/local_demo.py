@@ -19,6 +19,9 @@ TYPES = ('융자','보조금','보증','교육','멘토링','공간','사업화'
 def _extracted(value, evidence=None):
     return {'value':value,**({'evidence':evidence} if evidence and value is not None else {})}
 
+def profile_stage_is_pre(o, stage):
+    return (o.get('bizStage') or stage) == '예비창업'
+
 def get_profile(text: str, overrides: dict | None):
     txt=re.sub(r'\[[^\]]*\]',' ',text)
     m=re.search(r'(?:만\s*)?(\d{2})\s*[살세]',txt)
@@ -29,7 +32,8 @@ def get_profile(text: str, overrides: dict | None):
         sigungu=None
     stage='예비창업' if re.search(r'예비창업|창업\s*전|미창업|창업\s*예정',txt) else None
     if stage is None and re.search(r'(창업|개업)\s*[1-3]\s*년|업력\s*[1-3]\s*년',txt): stage='업력3년이하'
-    category='카페' if re.search('카페|커피|디저트|베이커리',txt) else '음식점' if re.search('음식점|식당|분식|치킨|피자|고깃집',txt) else None
+    # 9개 업종 카테고리(프론트 src/lib/industry.ts). 애매하면 비운다
+    category='음식·카페' if re.search(r'카페|커피|베이커리|디저트\s*카페|음식점|식당|분식|치킨|피자|고깃집',txt) else None
     needs=[]
     if re.search('모자라|부족|자금|대출|지원금|융자',txt): needs+=['융자','보조금']
     for k in ('교육','멘토링','공간','사업화','보증'):
@@ -72,12 +76,13 @@ def get_profile(text: str, overrides: dict | None):
        'industryText':_extracted(None),'targetGroups':groups,'needs':needs,
        'fundingGapManwon':_extracted(fund),'budgetManwon':_extracted(None),
        'experienceYears':_extracted(None),
-       'experienceMonths':_extracted(override('experienceMonths',exp_months)),
+       # 예비창업자는 업력 0개월 (회의 결정)
+       'experienceMonths':_extracted(override('experienceMonths', 0 if profile_stage_is_pre(o,stage) else exp_months)),
        'bizSigungu':_extracted(override('bizSigungu', None if 'sido' in o else biz_gu)),
        'freeText':text
     }
     # 필수 항목 (프론트 required.ts 와 같다): 공통 나이·거주지 구·창업 단계, 기창업 +업력·사업장 구, 예비창업 +창업 예정 구
-    required=['age','sigungu','bizStage']
+    required=['age','sigungu','bizStage','industryCategory']
     if profile['bizStage']['value']=='예비창업': required+=['bizSigungu']
     elif profile['bizStage']['value']: required+=['experienceMonths','bizSigungu']
     missing=[k for k in required if profile[k]['value'] in (None,'')]
