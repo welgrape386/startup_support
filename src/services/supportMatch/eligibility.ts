@@ -15,6 +15,9 @@ import type {
 /** asOf 시각의 한국 날짜 'YYYY-MM-DD' */
 export const kstDate = (asOf: Date) => new Date(asOf.getTime() + 9 * 3_600_000).toISOString().slice(0, 10)
 
+/** 판정 기준일 고정 (나애 요청 2026-11-12: 공고 데이터 기준일 10/16). 오늘 날짜로 되돌리려면 kstDate(new Date()) */
+export const JUDGE_DATE = '2026-10-16'
+
 /** 모집중·모집예정이고 마감일이 today 이후(당일 포함). applyEnd 는 'YYYY-MM-DD' */
 export const isOpen = (p: SupportProgram, today: string) =>
   p.status !== '마감' && (p.applyEnd == null || p.applyEnd >= today)

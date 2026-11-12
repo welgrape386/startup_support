@@ -54,8 +54,9 @@ export function extractRegion(text: string): { sido: string | null; sigungu: str
 }
 
 export function extractCategory(text: string): string | null {
-  if (/카페|커피|디저트|베이커리/.test(text)) return '카페'
-  if (/음식점|식당|한식|중식|일식|양식|분식|치킨|피자|고깃집|주점/.test(text)) return '음식점'
+  // 9개 업종 카테고리(src/lib/industry.ts)로 묶는다. 애매하면 비운다 (확인 필요)
+  if (/카페|커피|베이커리|디저트\s*카페/.test(text)) return '음식·카페'
+  if (/음식점|식당|한식|중식|일식|양식|분식|치킨|피자|고깃집|주점/.test(text)) return '음식·카페'
   return null
 }
 
@@ -101,7 +102,8 @@ export function ruleProfile(raw: string, overrides: SupportMatchRequest['overrid
     fundingGapManwon: { value: extractManwon(text) },
     budgetManwon: { value: null },
     experienceYears: { value: null },
-    experienceMonths: { value: 'experienceMonths' in o ? ((o.experienceMonths as number | null) ?? null) : extractExperienceMonths(text) },
+    // 예비창업자는 업력이 무조건 0개월 (회의 결정)
+    experienceMonths: { value: 'experienceMonths' in o ? ((o.experienceMonths as number | null) ?? null) : (o.bizStage ?? (/예비/.test(text) ? '예비창업' : null)) === '예비창업' ? 0 : extractExperienceMonths(text) },
     // 칩으로 고친 사업장 구가 우선. 시도만 고치면 문장 속 구는 비운다 (시군구와 같은 규칙)
     bizSigungu: { value: 'bizSigungu' in o ? ((o.bizSigungu as string | null) ?? null) : o.sido ? null : extractBizGu(text) },
     freeText: raw,
