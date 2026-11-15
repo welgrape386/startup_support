@@ -238,29 +238,102 @@ def special_target(pid, question, stage="", industry="", age=""):
         return "중장년"
     return None
 
+def industry_mismatch(pid, user_cats):
+    """공고 업종(industry_map.csv)과 사용자 업종 카테고리가 안 맞으면 True
+    허용이 '전체'가 아닌데 하나도 안 겹치거나, 제외에 걸리면 안 맞음. 업종 모름·기타면 판단 안 함"""
+    if not user_cats or user_cats <= {"기타"} or pid not in INDUSTRY:
+        return False
+    allow, deny = INDUSTRY[pid]
+    return (allow != {"전체"} and not (allow & user_cats)) or bool(deny & user_cats)
+
+def _load_industry():
+    if not INDUSTRY_MAP.exists():
+        return {}
+    with open(INDUSTRY_MAP, encoding="utf-8-sig") as f:      # 트랙 빈칸 = 공고 전체 줄만 씀
+        return {r["pblancId"]: (set(r["허용"].split("|")), set(filter(None, r["제외"].split("|"))))
+                for r in csv.DictReader(f) if not r.get("트랙")}
+
+INDUSTRY_MAP = RAG / "02_검색대상_시험지" / "industry_map.csv"
+INDUSTRY = _load_industry()
+
+def _load_age():
+    path = RAG / "02_검색대상_시험지" / "age_map.csv"
+    if not path.exists():
+        return {}
+    with open(path, encoding="utf-8-sig") as f:
+        return {r["pblancId"]: (float(r["min"]) if r["min"] else None, float(r["max"]) if r["max"] else None)
+                for r in csv.DictReader(f)}
+
+AGE = _load_age()
+
+def age_mismatch(pid, age):
+    """공고 나이 조건(age_map.csv, 대표자·본인 기준)과 사용자 나이가 안 맞으면 True. 나이 모르면 판단 안 함"""
+    if not age or pid not in AGE:
+        return False
+    lo, hi = AGE[pid]
+    a = float(age)
+    return (lo is not None and a < lo) or (hi is not None and a > hi)
+
+# 원하는 지원별로 질문 뒤에 붙일 공고 쪽 단어 (make_category.py KEYWORDS에서 고름, 질문지 보고 고른 것 아님)
+NEED_HINT = {
+    "자금": "자금 융자 보증 정책자금 지원금 사업화자금",
+    "교육·컨설팅": "교육 컨설팅 멘토링 상담 코칭",
+    "공간·시설": "공간 입주 시설 장비 점포 매장",
+    "홍보·판매": "판로 홍보 마케팅 판매 라이브커머스 입점",
+    "인력": "채용 인건비 고용지원 일자리",
+    "기술개발": "R&D 기술개발 시제품 특허",
+    "해외진출": "해외 수출 글로벌",
+    "제도·인증": "인증 확인서",
+}
+# 넓은 말만 (카테고리 이름 수준). 융자·멘토링처럼 한 방식으로 좁히는 말은 뺌
+NEED_HINT_SHORT = {
+    "자금": "자금 지원금",
+    "교육·컨설팅": "교육 컨설팅",
+    "공간·시설": "공간 시설",
+    "홍보·판매": "판로 홍보 판매",
+    "인력": "채용 인건비",
+    "기술개발": "기술개발 R&D",
+    "해외진출": "해외 수출",
+    "제도·인증": "인증",
+}
+
 class NeedBoost:
     """
     상위 n개 안에서만 순서를 바꿈 (Recall@n은 그대로)
     - 원하는 지원(need)과 공고 카테고리가 같으면 점수 + bonus
     - special_penalty가 있으면 특수 대상 공고 점수 - penalty
+    - industry_penalty가 있으면 업종 안 맞는 공고 점수 - penalty (industry_cat: "음식·카페|도소매·판매")
+    - age_rule이면 나이 조건 안 맞는 공고도 특수 대상처럼 내림 (특수 대상과 겹치면 한 번만)
     """
-    def __init__(self, first, scorer, n=20, bonus=0.01, special_penalty=0.0):
+    def __init__(self, first, scorer, n=20, bonus=0.01, special_penalty=0.0, industry_penalty=0.0, age_rule=False,
+                 need_hint=False):
         self.first, self.scorer, self.n, self.bonus = first, scorer, n, bonus
         self.penalty = special_penalty
+        self.ind_penalty = industry_penalty
+        self.age_rule = age_rule
+        # 원하는 지원 단어를 질문 뒤에 붙여서 검색. True면 NEED_HINT, dict면 그 단어
+        self.need_hint = NEED_HINT if need_hint is True else (need_hint or {})
         with open(CATEGORY, encoding="utf-8-sig") as f:
             self.cats = {r["pblancId"]: {c for c, v in r.items() if v == "1"} for r in csv.DictReader(f)}
-    def search(self, query, k=10, user_gu="", stage="", need="", industry="", age=""):
+    def search(self, query, k=10, user_gu="", stage="", need="", industry="", age="", industry_cat=""):
+        question = query                # 특수 대상 판단은 원래 질문으로
+        if need in self.need_hint:
+            query = f"{query} {self.need_hint[need]}"
         cands = self.first.search(query, self.n, user_gu, stage)
         has_need = need and need != "미지정"
-        if not has_need and not self.penalty:
+        user_cats = set(filter(None, industry_cat.split("|"))) if self.ind_penalty else set()
+        if not has_need and not self.penalty and not user_cats:
             return cands[:k]
         score = self.scorer.scores(query)
         def adjusted(p):
             s = score[p]
             if has_need and need in self.cats.get(p, ()):
                 s += self.bonus
-            if self.penalty and special_target(p, query, stage, industry, age):
+            if self.penalty and (special_target(p, question, stage, industry, age)
+                                 or (self.age_rule and age_mismatch(p, age))):
                 s -= self.penalty
+            if user_cats and industry_mismatch(p, user_cats):
+                s -= self.ind_penalty
             return s
         ranked = sorted(cands, key=lambda p: -adjusted(p))
         demote = self.first.demote_for(stage)

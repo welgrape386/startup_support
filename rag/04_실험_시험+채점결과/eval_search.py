@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from openpyxl.styles import Alignment, Font
-from retrievers import V0, V1, Hybrid, RegionFilter, NeedBoost, GUIDE_IDS, original_passages, clean_passages, DOC_BY_ID
+from retrievers import V0, V1, Hybrid, RegionFilter, NeedBoost, GUIDE_IDS, original_passages, clean_passages, DOC_BY_ID, NEED_HINT_SHORT
 
 TAG    = "test"
 TITLE  = "(실험 제목)"
@@ -55,7 +55,12 @@ region = RegionFilter(hy, demote_other_gu=5, stage_aware=True)
 region_g = RegionFilter(hy, demote_other_gu=5, stage_aware=True, drop_guide=True)
 need = NeedBoost(region, hy)
 special = NeedBoost(region, hy, special_penalty=0.01)
-default = NeedBoost(region_g, hy, special_penalty=0.01)      # search_service.py와 같음
+guide = NeedBoost(region_g, hy, special_penalty=0.01)
+range40 = NeedBoost(region_g, hy, n=40, special_penalty=0.01)
+industry = NeedBoost(region_g, hy, n=40, special_penalty=0.01, industry_penalty=0.01)
+age = NeedBoost(region_g, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True)
+default = NeedBoost(region_g, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
+                    need_hint=NEED_HINT_SHORT)   # search_service.py와 같음
 
 BASE = "지금 기본"
 SEARCHERS = [
@@ -64,7 +69,11 @@ SEARCHERS = [
     ("다른 구 미루기 (예비만)",  lambda q: region.search(q.question, K, q.region, q.stage)),
     ("원하는 지원 올리기",       lambda q: need.search(q.question, K, q.region, q.stage, q.need)),
     ("특수 대상 내리기",         lambda q: special.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age)),
-    (BASE,                    lambda q: default.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age)),
+    ("통합공고 제외",            lambda q: guide.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age)),
+    ("올리기 범위 40",           lambda q: range40.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age)),
+    ("업종 내리기",              lambda q: industry.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
+    ("나이 조건 내리기",          lambda q: age.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
+    (BASE,                    lambda q: default.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
     # 새 실험은 여기에
 ]
 NEW = SEARCHERS[-1][0]

@@ -5,10 +5,11 @@
     search("마포구에서 디저트 카페를 준비하는 예비창업자예요", user_gu="마포구", stage="예비", need="홍보·판매")
 
 인자 (모르면 "")
-- user_gu  : 서울 구 이름 (예: "마포구")
-- stage    : "예비" / "개업"
+- user_gu  : 서울 구 이름. 예비면 창업 예정 구, 개업이면 사업장 구 (예: "마포구")
+- stage    : "예비" / "개업" / "폐업" (사업자이력 그대로. 폐업은 지역은 예비처럼, 폐업자 공고는 안 내림)
 - need     : 자금, 교육·컨설팅, 공간·시설, 홍보·판매, 인력, 기술개발, 해외진출, 제도·인증, 기타, 미지정 중 하나
-- industry : 업종 (예: "디저트 카페")
+- industry : 업종 원문 표현 (예: "디저트 카페")
+- industry_cat : 업종 카테고리 1~2개, "|"로 구분 (예: "음식·카페", "공방·제조|도소매·판매")
 - age      : 나이
 - k        : 판정으로 넘길 개수, 기본 20
 
@@ -19,9 +20,10 @@
 - elig_evidence : 자격 조건이 있을 법한 문단
 처음 부를 때 모델을 불러와서 수십 초 걸림
 """
-from retrievers import V0, V1, Hybrid, RegionFilter, NeedBoost, clean_passages
+from retrievers import V0, V1, Hybrid, RegionFilter, NeedBoost, clean_passages, NEED_HINT_SHORT
 
 SEARCH_TOP_K = 20
+NEED_RANGE = 40      # 원하는 지원 올리기·특수 대상 내리기를 상위 몇 개에서 돌릴지 (#27)
 ELIG_HINT = " 신청자격 지원대상 신청대상"
 DROP_GUIDE = True
 _engine = None
@@ -33,16 +35,17 @@ def _load():
         v1 = V1((CT, CO), rows=rows)
         hy = Hybrid(V0((CT, CO)), v1)
         region = RegionFilter(hy, demote_other_gu=5, stage_aware=True, drop_guide=DROP_GUIDE)
-        _engine = (hy, v1, NeedBoost(region, hy, n=SEARCH_TOP_K, special_penalty=0.01))
+        _engine = (hy, v1, NeedBoost(region, hy, n=NEED_RANGE, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
+                                     need_hint=NEED_HINT_SHORT))
     return _engine
 
 def _strip(text):
     """원문 문단 앞의 [공고명] 줄 떼기"""
     return text.split("\n", 1)[1] if text.startswith("[") else text
 
-def search(query, user_gu="", k=SEARCH_TOP_K, stage="", need="", industry="", age=""):
+def search(query, user_gu="", k=SEARCH_TOP_K, stage="", need="", industry="", age="", industry_cat=""):
     hy, v1, engine = _load()
-    ranked = engine.search(query, k, user_gu, stage, need, industry, str(age or ""))
+    ranked = engine.search(query, k, user_gu, stage, need, industry, str(age or ""), industry_cat)
     score = hy.scores(query)
     best = v1.best_passages(query)
     best_elig = v1.best_passages(query + ELIG_HINT)
