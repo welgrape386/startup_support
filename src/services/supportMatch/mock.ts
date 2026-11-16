@@ -31,7 +31,7 @@ export function mockPrograms(today: string): SupportProgram[] {
       fields: { 지원대상: '만 19~34세 예비창업자 및 창업 3년 이내 기업' },
       eligibility: [{ mode: 'all', rules: [
         { kind: 'age', min: 19, max: 34, quote: '만 19~34세 예비창업자 및 창업 3년 이내 기업', section: '지원대상' },
-        { kind: 'bizStage', allowed: ['예비창업', '업력3년이하'], quote: '만 19~34세 예비창업자 및 창업 3년 이내 기업', section: '지원대상' },
+        { kind: 'bizStage', allowed: ['예비창업', '초기창업'], maxMonths: 36, quote: '만 19~34세 예비창업자 및 창업 3년 이내 기업', section: '지원대상' },
       ] }],
     },
     {
@@ -63,7 +63,7 @@ export function mockPrograms(today: string): SupportProgram[] {
       rolling: true,
       eligibility: [{ mode: 'all', rules: [
         { kind: 'age', min: 19, max: 39, quote: '만 19~39세 청년 (예비)창업자', section: '지원대상' },
-        { kind: 'bizStage', allowed: ['예비창업', '업력3년이하'], quote: '만 19~39세 청년 (예비)창업자', section: '지원대상' },
+        { kind: 'bizStage', allowed: ['예비창업', '초기창업'], maxMonths: 36, quote: '만 19~39세 청년 (예비)창업자', section: '지원대상' },
       ] }],
     },
   ]

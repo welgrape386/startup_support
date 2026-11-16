@@ -32,7 +32,7 @@ export function SupportMatch() {
   const missing = [
     !p.age.value && '나이(만 나이, 예: 만 27세)',
     !p.sigungu.value && '거주지 구(서울 기준, 예: 마포구)',
-    !p.bizStage.value && '창업 단계(예비창업 / 기창업)',
+    !p.bizStage.value && '창업 단계(예비창업 / 초기창업)',
     !p.industryCategory.value && '업종(예: 카페, 음식점)',
   ].filter((x): x is string => Boolean(x))
   const canSubmit = !inputError(text) && len >= MIN_TEXT_LENGTH

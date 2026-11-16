@@ -10,8 +10,8 @@ type Candidate = Omit<NextStep, 'programIds' | 'unknownAfter'>
 /** 후보 값은 공고 규칙에 적힌 값에서 가져온다. isActionable 이 true 인 규칙만 들어온다 */
 function candidates(rule: EligibilityRule): Candidate[] {
   if (rule.kind === 'bizStage')
-    // 예비창업 → 사업자 등록 직후(업력3년이하)면 사업자 단계 공고를 모두 충족한다
-    return [{ field: 'bizStage', value: '업력3년이하', label: '사업자 등록을 하면', patch: { bizStage: '업력3년이하' } }]
+    // 예비창업 → 사업자 등록 직후(초기창업 1개월)면 사업자 단계 공고를 충족할 수 있다
+    return [{ field: 'bizStage', value: '초기창업', label: '사업자 등록을 하면', patch: { bizStage: '초기창업', experienceMonths: 1 } }]
   if (rule.kind === 'region')
     // 같은 시도 안의 시군구만 (isActionable 이 시도 일치를 보장)
     return (rule.sigungu ?? []).map((gu) => ({
