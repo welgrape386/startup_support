@@ -206,7 +206,7 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         put('sido', search.get('검색시도'))
         put('sigungu', search.get('검색지역'))
         stage = extra.get('창업단계_언급')
-        put('bizStage', '예비창업' if stage=='예비' else '업력3년이하' if stage=='개업' and (extra.get('업력_개월') or 0)<=36 else None)
+        put('bizStage', '예비창업' if stage=='예비' else '초기창업' if stage=='개업' else None)
         put('industryText', search.get('업종원문표현'))
         needs = [x for x in search.get('필요지원',[]) if x!='미지정']
         if needs: profile['needs']=needs
@@ -238,7 +238,8 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         if a.apply_end is not None:
             if a.apply_start and a.apply_start>today:continue
             if a.apply_end < today:continue
-        # 날짜가 없는 공고(예산 소진시까지 등)는 빼지 않고 '기간 확인 필요'로 보여준다
+        elif not (a.rolling and a.application_period_raw and re.search(r'상시\s*접수|연중|수시',a.application_period_raw)):
+            continue
         s=_score(a,terms,profile)
         active.append((s,a))
     active.sort(key=lambda pair:(pair[0], pair[1].apply_end or date.max),reverse=True)
