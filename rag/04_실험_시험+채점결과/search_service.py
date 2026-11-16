@@ -6,7 +6,7 @@
 
 인자 (모르면 "")
 - user_gu  : 서울 구 이름. 예비면 창업 예정 구, 개업이면 사업장 구 (예: "마포구")
-- stage    : "예비" / "개업" / "폐업" (사업자이력 그대로. 폐업은 지역은 예비처럼, 폐업자 공고는 안 내림)
+- stage    : "예비" / "개업" / "폐업" (사업자이력 그대로. 폐업은 예비처럼 봄)
 - need     : 자금, 교육·컨설팅, 공간·시설, 홍보·판매, 인력, 기술개발, 해외진출, 제도·인증, 기타, 미지정 중 하나
 - industry : 업종 원문 표현 (예: "디저트 카페")
 - industry_cat : 업종 카테고리 1~2개, "|"로 구분 (예: "음식·카페", "공방·제조|도소매·판매")
@@ -34,7 +34,8 @@ def _load():
         CT, CO, rows = clean_passages()
         v1 = V1((CT, CO), rows=rows)
         hy = Hybrid(V0((CT, CO)), v1)
-        region = RegionFilter(hy, demote_other_gu=5, stage_aware=True, drop_guide=DROP_GUIDE)
+        region = RegionFilter(hy, demote_other_gu=5, stage_aware=True, drop_guide=DROP_GUIDE,
+                              demote_local=True)
         _engine = (hy, v1, NeedBoost(region, hy, n=NEED_RANGE, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
                                      need_hint=NEED_HINT_SHORT))
     return _engine

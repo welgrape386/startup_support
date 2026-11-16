@@ -7,7 +7,7 @@
 결과는 runs/번호_TAG/ (점수 csv, 비교표 엑셀, 그때 코드 복사본)
 LOG = True면 실험기록.md에 '지금 기본 vs 이번 버전'이 새 번호로 붙음
 
-지표: Recall@5, Recall@20, MRR, nDCG@5 (정답 = 1점 이상, 통합공고는 0점)
+지표: Recall@5, Recall@20, MRR, nDCG@5 (정답 = 1점 이상, 검색에서 빼는 공고(EXCLUDE_IDS)는 0점)
 """
 import re, shutil
 from datetime import datetime
@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from openpyxl.styles import Alignment, Font
-from retrievers import V0, V1, Hybrid, RegionFilter, NeedBoost, GUIDE_IDS, original_passages, clean_passages, DOC_BY_ID, NEED_HINT_SHORT
+from retrievers import V0, V1, Hybrid, RegionFilter, NeedBoost, EXCLUDE_IDS, original_passages, clean_passages, DOC_BY_ID, NEED_HINT_SHORT
 
 TAG    = "test"
 TITLE  = "(실험 제목)"
@@ -33,7 +33,7 @@ RUN_DIR = HERE / "runs" / (f"{_n:02d}_{TAG}" if LOG else f"_test/{TAG}")
 
 label = {}
 for _, r in POOL.iterrows():
-    label.setdefault(r.qid, {})[r.pblancId] = 0 if r.pblancId in GUIDE_IDS else int(r.score)
+    label.setdefault(r.qid, {})[r.pblancId] = 0 if r.pblancId in EXCLUDE_IDS else int(r.score)
 gold = {q: {p: s for p, s in d.items() if s >= 1} for q, d in label.items()}
 
 def recall(rk, g, k): return len(set(rk[:k]) & set(g)) / len(g)
@@ -53,6 +53,7 @@ hy = Hybrid(v0c, v1c)
 K = 20
 region = RegionFilter(hy, demote_other_gu=5, stage_aware=True)
 region_g = RegionFilter(hy, demote_other_gu=5, stage_aware=True, drop_guide=True)
+region_l = RegionFilter(hy, demote_other_gu=5, stage_aware=True, drop_guide=True, demote_local=True)
 need = NeedBoost(region, hy)
 special = NeedBoost(region, hy, special_penalty=0.01)
 guide = NeedBoost(region_g, hy, special_penalty=0.01)
@@ -60,7 +61,9 @@ range40 = NeedBoost(region_g, hy, n=40, special_penalty=0.01)
 industry = NeedBoost(region_g, hy, n=40, special_penalty=0.01, industry_penalty=0.01)
 age = NeedBoost(region_g, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True)
 default = NeedBoost(region_g, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
-                    need_hint=NEED_HINT_SHORT)   # search_service.py와 같음
+                    need_hint=NEED_HINT_SHORT)
+local = NeedBoost(region_l, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
+                  need_hint=NEED_HINT_SHORT)   # search_service.py와 같음 (#32)
 
 BASE = "지금 기본"
 SEARCHERS = [
@@ -73,7 +76,8 @@ SEARCHERS = [
     ("올리기 범위 40",           lambda q: range40.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age)),
     ("업종 내리기",              lambda q: industry.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
     ("나이 조건 내리기",          lambda q: age.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
-    (BASE,                    lambda q: default.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
+    ("원하는 지원 단어 붙이기",     lambda q: default.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
+    (BASE,                    lambda q: local.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
     # 새 실험은 여기에
 ]
 NEW = SEARCHERS[-1][0]

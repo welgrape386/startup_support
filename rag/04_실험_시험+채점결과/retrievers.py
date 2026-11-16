@@ -27,6 +27,37 @@ GUIDE_IDS = {"PBLN_000000000116904",   # 중앙부처 및 지자체 창업지원
              "PBLN_000000000118204",   # 여성기업 육성사업 공고
              "PBLN_000000000116741"}   # 중소기업 수출지원사업 통합 공고
 
+# 원문이 없는 공고: 조건을 못 뽑아서 판정 불가 (11/16 제외 결정)
+NO_TEXT_IDS = {"PBLN_000000000119754",   # 팁스(TIPS) 창업기업 지원계획
+               "PBLN_000000000121498",   # 농업용 면세유 유가연동보조금
+               "PBLN_000000000123334",   # 소상공인 무료 법률·세무·노무 간편상담
+               "PBLN_000000000124676",   # 소상공인 안전검사 지원 (생활용품·어린이제품)
+               "PBLN_000000000125810",   # 강남구 청년일자리도약장려금
+               "PBLN_000000000126188",   # 위치정보 맞춤형 컨설팅
+               "PBLN_000000000126865"}   # 서리풀 소상공인 창업 클리닉
+
+# 사용자가 신청하는 공고가 아님 (예은님 조건 추출에서도 뺌, 11/16)
+NOT_APPLY_IDS = {"PBLN_000000000092578",   # 체납액 징수특례 제도 안내 (모집 공고 아님)
+                 "PBLN_000000000116975",   # 넷제로 챌린지X 통합 공고 (자격이 개별 공고에)
+                 "PBLN_000000000122497",   # SW개발자 채용기업 모집 (채용공고 양식뿐)
+                 "PBLN_000000000127096"}   # 초격차 정부 첫 실증·구매 주관기관 모집 (신청 대상이 주관기관)
+
+# 폐업(예정)자 전용: 서비스 대상 아님, 판정규칙 1-6 (11/16)
+CLOSING_ONLY_IDS = {"PBLN_000000000117676",   # 희망리턴패키지 원스톱폐업지원
+                    "PBLN_000000000117673",   # 희망리턴패키지 특화취업지원
+                    "PBLN_000000000119017"}   # 새 길 여는 폐업지원
+
+# 검색에서 빼고 채점에서 0점 처리하는 공고 전체
+EXCLUDE_IDS = GUIDE_IDS | NO_TEXT_IDS | NOT_APPLY_IDS | CLOSING_ONLY_IDS
+
+# 지방 센터 운영: 자격은 전국이라 안 빼지만 프로그램이 그 지역에서 열림 → 6위 아래로 (11/16)
+LOCAL_RUN_IDS = {"PBLN_000000000117984",   # 제주센터 창업-BuS
+                 "PBLN_000000000118729",   # 경북센터 창업-BuS
+                 "PBLN_000000000119817",   # 광주센터 창업BuS
+                 "PBLN_000000000119999",   # 인천센터 창업-BuS
+                 "PBLN_000000000120946",   # 전남센터 창업 BuS
+                 "PBLN_000000000126928"}   # 오픈이노베이션 (충북센터)
+
 
 # 1. 문단 만들기 ------------------------------------------------------------
 def summary_passages():
@@ -179,34 +210,41 @@ def region_ok(pid, user_gu, gu_strict=True):
         return False
     return True
 
-def own_first(ranked, user_gu, n):
-    """상위 n칸은 내 구·전국·서울 공통 공고로 채움"""
-    top = [p for p in ranked if region_ok(p, user_gu, gu_strict=True)][:n]
+def own_first(ranked, user_gu, n, gu=True, local=False):
+    """상위 n칸은 내 구·전국·서울 공통 공고로 채움. local이면 지방 운영 공고도 뒤로"""
+    top = [p for p in ranked if (not gu or region_ok(p, user_gu, gu_strict=True))
+           and not (local and p in LOCAL_RUN_IDS)][:n]
     return top + [p for p in ranked if p not in top]
 
 class RegionFilter:
     """
     demote_other_gu=5 : 다른 구 공고를 6위 아래로 (빼지는 않음)
     stage_aware       : 개업한 사용자는 다른 구 공고를 뺌 (구 이동은 예비창업자만)
-    drop_guide        : 통합공고 뺌
+    drop_guide        : 통합공고·원문 없는 공고·신청 대상 아닌 공고·폐업 전용(EXCLUDE_IDS) 뺌
+    demote_local      : 지방 운영 공고(LOCAL_RUN_IDS)를 6위 아래로
     """
-    def __init__(self, base, gu_strict=True, demote_other_gu=0, stage_aware=False, drop_guide=False):
+    def __init__(self, base, gu_strict=True, demote_other_gu=0, stage_aware=False, drop_guide=False, demote_local=False):
         self.base = base
         self.gu_strict = gu_strict and not demote_other_gu
         self.demote = demote_other_gu
         self.stage_aware = stage_aware
         self.drop_guide = drop_guide
+        self.demote_local = demote_local
     def demote_for(self, stage):
         return 0 if (self.stage_aware and stage == "개업") else self.demote
+    def front(self, ranked, user_gu, stage):
+        """다른 구·지방 운영 공고를 상위 5칸 밖으로"""
+        demote = self.demote_for(stage)
+        if demote or self.demote_local:
+            ranked = own_first(ranked, user_gu, demote or 5, gu=bool(demote), local=self.demote_local)
+        return ranked
     def search(self, query, k=10, user_gu="", stage=""):
         demote = self.demote_for(stage)
         strict = self.gu_strict or (self.demote and not demote)
         ranked = [p for p in self.base.search(query, len(IDS)) if region_ok(p, user_gu, strict)]
         if self.drop_guide:
-            ranked = [p for p in ranked if p not in GUIDE_IDS]
-        if demote:
-            ranked = own_first(ranked, user_gu, demote)
-        return ranked[:k]
+            ranked = [p for p in ranked if p not in EXCLUDE_IDS]
+        return self.front(ranked, user_gu, stage)[:k]
 
 
 # 4. 순서 조정 ---------------------------------------------------------------
@@ -336,7 +374,4 @@ class NeedBoost:
                 s -= self.ind_penalty
             return s
         ranked = sorted(cands, key=lambda p: -adjusted(p))
-        demote = self.first.demote_for(stage)
-        if demote:
-            ranked = own_first(ranked, user_gu, demote)
-        return ranked[:k]
+        return self.first.front(ranked, user_gu, stage)[:k]

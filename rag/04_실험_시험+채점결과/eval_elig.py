@@ -14,7 +14,7 @@ from datetime import datetime
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from retrievers import V0, V1, Hybrid, RegionFilter, NeedBoost, clean_passages, tokenize, GUIDE_IDS, TEXTS, RAG
+from retrievers import V0, V1, Hybrid, RegionFilter, NeedBoost, clean_passages, tokenize, EXCLUDE_IDS, TEXTS, RAG
 from search_service import ELIG_HINT
 
 HERE = Path(__file__).resolve().parent
@@ -53,7 +53,7 @@ QS = pd.read_csv(RAG / "03_평가셋_문제+답안지" / "search_questions.csv",
 POOL = pd.read_excel(RAG / "03_평가셋_문제+답안지" / "pool_snap1016.xlsx", sheet_name="답안지")
 gold = {}
 for _, r in POOL.iterrows():
-    if r.score >= 1 and r.pblancId not in GUIDE_IDS:
+    if r.score >= 1 and r.pblancId not in EXCLUDE_IDS:
         gold.setdefault(r.qid, set()).add(r.pblancId)
 
 res = []
