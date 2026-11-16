@@ -50,6 +50,7 @@ function profile(p: {
   sido?: string
   sigungu?: string
   bizStage?: BizStage
+  experienceMonths?: number
   industry?: string
   targetGroups?: TargetGroup[]
   needs?: SupportType[]
@@ -66,7 +67,7 @@ function profile(p: {
     fundingGapManwon: { value: null },
     budgetManwon: { value: null },
     experienceYears: { value: null },
-    experienceMonths: { value: null },
+    experienceMonths: { value: p.experienceMonths ?? null },
     bizSigungu: { value: null },
     freeText: '',
   }
@@ -215,7 +216,7 @@ const BOJEUNG = fixture(
     { kind: 'region', sido: ['인천광역시'], quote: '타시도 소상공인', section: '지원제외기준' },
     {
       kind: 'bizStage',
-      allowed: ['업력3년이하', '업력7년이하', '기창업'],
+      allowed: ['초기창업'],
       quote: '인천시에 사업자 등록을 한 소상공인',
       section: '지원조건',
     },
@@ -242,7 +243,7 @@ const BOJEUNG = fixture(
 const MAPO = fixture('mapo-only', [{ kind: 'region', sido: ['서울특별시'], sigungu: ['마포구'], quote: '마포구 소재' }])
 const AGE_AND_STAGE = fixture('age-and-stage', [
   { kind: 'age', max: 34, quote: '만 34세 이하' },
-  { kind: 'bizStage', allowed: ['업력3년이하'], quote: '창업 3년 이내' },
+  { kind: 'bizStage', allowed: ['초기창업'], maxMonths: 36, quote: '창업 3년 이내' },
 ])
 const POOL = [...MOCK, BOJEUNG, MAPO, AGE_AND_STAGE]
 const PRE_INCHEON = profile({ age: 30, sido: '인천광역시', bizStage: '예비창업', targetGroups: ['소상공인'] })
@@ -272,7 +273,7 @@ test('#13 모든 nextSteps → 프로필을 바꿔 다시 판정하면 미달 �
     PRE_INCHEON,
     profile({ age: 40, sido: '서울특별시', sigungu: '강남구', bizStage: '예비창업' }),
     profile({ age: 29, sido: '부산광역시', bizStage: '예비창업', industry: '카페' }),
-    profile({ sido: '서울특별시', bizStage: '업력3년이하' }),
+    profile({ sido: '서울특별시', bizStage: '초기창업', experienceMonths: 18 }),
   ]
   let checked = 0
   for (const u of users)
@@ -296,7 +297,7 @@ test('#14 rolling 공고 daysLeft=null, 총예산(지원규모)은 1인 한도·
     text: '지원규모: 3,250억원\n지원내용: 소상공인 특례보증 및 이차보전 지원(연1.5~2%, 3년간)',
     embedding: [],
   }
-  const u = profile({ sido: '인천광역시', bizStage: '업력3년이하', targetGroups: ['소상공인'] })
+  const u = profile({ sido: '인천광역시', bizStage: '초기창업', experienceMonths: 18, targetGroups: ['소상공인'] })
   const out = validateMatch(
     {
       headline: '인천 소상공인 보증 지원',
@@ -335,12 +336,13 @@ test('#15 조건부는 추천(results)과 분리 → conditional 에만, nextSte
 
 // ── 결정 사항 (SPEC 8-1) 회귀 ──────────────────────────────────────────
 
-test('a 업력: 사용자 3년이하 vs 공고 7년이하 = 충족, 7년이하 vs 3년이하 = 확인 필요, 예비 vs 업력 = 조건부', () => {
-  const p = fixture('tenure7', [{ kind: 'bizStage', allowed: ['업력7년이하'], quote: '창업 7년 이내' }])
-  const q = fixture('tenure3', [{ kind: 'bizStage', allowed: ['업력3년이하'], quote: '창업 3년 이내' }])
-  eq(verdictOf(p, profile({ bizStage: '업력3년이하' })), '자격 충족', '3 vs 7')
-  eq(verdictOf(q, profile({ bizStage: '업력7년이하' })), '확인 필요', '7 vs 3')
-  eq(verdictOf(q, profile({ bizStage: '예비창업' })), '조건부', '예비 vs 3 (사업자 등록으로 바꿀 수 있음)')
+test('a 업력: 초기창업 24개월 vs 공고 36개월 = 충족, 초기창업 48개월 vs 공고 36개월 = 미달, 예비창업 vs 초기창업 공고 = 조건부', () => {
+  const p = fixture('tenure36', [{ kind: 'bizStage', allowed: ['초기창업'], maxMonths: 36, quote: '창업 3년 이내' }])
+  const q = fixture('tenure84', [{ kind: 'bizStage', allowed: ['초기창업'], maxMonths: 84, quote: '창업 7년 이내' }])
+  eq(verdictOf(p, profile({ bizStage: '초기창업', experienceMonths: 24 })), '자격 충족', '24개월 vs 36개월')
+  eq(verdictOf(p, profile({ bizStage: '초기창업', experienceMonths: 48 })), '자격 미달', '48개월 vs 36개월')
+  eq(verdictOf(q, profile({ bizStage: '초기창업', experienceMonths: 48 })), '자격 충족', '48개월 vs 84개월')
+  eq(verdictOf(p, profile({ bizStage: '예비창업' })), '조건부', '예비창업 vs 초기창업 공고 (사업자 등록으로 바꿀 수 있음)')
 })
 
 test('b 대상: 청년 공고 + 45세 = 미달, 여성 공고 + 성별 모름 = 확인 필요', () => {

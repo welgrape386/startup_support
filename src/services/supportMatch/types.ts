@@ -5,7 +5,7 @@ export type SupportType = '융자' | '보조금' | '보증' | '교육' | '멘토
 /** 결과 화면 카테고리 필터. 순서·표기 그대로 버튼에 쓴다 (공고의 support_types 값) */
 export const CATEGORIES = ['자금', '교육·컨설팅', '공간·시설', '홍보·판매', '인력', '기술개발', '해외진출', '제도·인증', '기타'] as const
 export type Category = (typeof CATEGORIES)[number]
-export type BizStage = '예비창업' | '업력3년이하' | '업력7년이하' | '기창업'
+export type BizStage = '예비창업' | '초기창업'
 export type TargetGroup = '청년' | '여성' | '장애인' | '중장년' | '소상공인' | '재창업' | '전체'
 
 /** 근거가 나온 포털 항목 (명세 3-2a) */
@@ -15,7 +15,7 @@ export type RuleSection = '지원대상' | '지원조건' | '지원제외기준'
 export type EligibilityRule = { quote: string; section: RuleSection } & (
   | { kind: 'age'; min?: number; max?: number }
   | { kind: 'region'; sido: string[]; sigungu?: string[] } // 빈 배열 = 전국
-  | { kind: 'bizStage'; allowed: BizStage[] }
+  | { kind: 'bizStage'; allowed: BizStage[]; maxMonths?: number } // maxMonths: 초기창업 최대 업력(개월)
   | { kind: 'industry'; include?: string[]; exclude?: string[] }
   | { kind: 'targetGroup'; anyOf: TargetGroup[] }
   | { kind: 'other'; text: string } // 구조화 불가 → 항상 unknown
@@ -162,7 +162,7 @@ export type NextStep = {
   field: 'bizStage' | 'sigungu'
   value: string
   label: string
-  patch: Partial<Record<'bizStage' | 'sigungu', string>>
+  patch: Partial<Record<'bizStage' | 'sigungu', string>> & { experienceMonths?: number }
   programIds: string[]
   /** 공고별, 바꾼 뒤에도 남는 unknown 규칙 수 */
   unknownAfter: Record<string, number>

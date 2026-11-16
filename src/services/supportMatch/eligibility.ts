@@ -2,7 +2,6 @@
    공고 본문(summary·청크)은 읽지 않으므로 본문 속 인젝션이 판정에 영향을 줄 수 없다. */
 
 import type {
-  BizStage,
   EligibilityRule,
   MatchVerdict,
   RuleResult,
@@ -24,8 +23,7 @@ export const isOpen = (p: SupportProgram, today: string) =>
 
 export const shortSido = (s: string) => s.replace(/(특별시|광역시|특별자치시|특별자치도)$/, '')
 
-// 업력 포함 관계: 업력3년이하 ⊂ 업력7년이하 ⊂ 기창업. 예비창업은 별개
-const TENURE: Partial<Record<BizStage, number>> = { 업력3년이하: 1, 업력7년이하: 2, 기창업: 3 }
+// 예비창업은 개월 수 0, 초기창업은 experienceMonths로 판정
 
 const normIndustry = (s: string) => s.replace(/\s/g, '').replace(/업$/, '')
 
@@ -73,14 +71,26 @@ export function judgeRule(rule: EligibilityRule, profile: UserProfile): RuleResu
       const stage = profile.bizStage.value
       const allowed = rule.allowed.join(', ')
       if (!stage) return r('unknown', '창업 단계를 입력하지 않았어요')
-      if (rule.allowed.includes(stage)) return r('pass', `${stage} 단계가 지원 대상에 포함돼요`)
-      const mine = TENURE[stage]
-      const ranks = rule.allowed.map((s) => TENURE[s]).filter((n): n is number => n != null)
-      if (mine != null && ranks.some((n) => n > mine))
-        return r('pass', `${stage} 단계는 지원 대상(${allowed})에 포함돼요`)
-      if (mine != null && ranks.length)
-        return r('unknown', `지원 대상(${allowed})에 해당하는지 정확한 업력 확인이 필요해요`)
-      return r('fail', `${stage} 단계는 지원 대상(${allowed})이 아니에요`)
+      // 예비창업: 공고가 예비창업을 허용하는지만 확인
+      if (stage === '예비창업') {
+        return rule.allowed.includes('예비창업')
+          ? r('pass', '예비창업자가 지원 대상에 포함돼요')
+          : r('fail', `예비창업자는 지원 대상(${allowed})이 아니에요`)
+      }
+      // 초기창업: 공고의 max 개월 수(rule.maxMonths)와 사용자 업력(개월)을 비교
+      if (rule.allowed.includes('예비창업') && !rule.maxMonths) {
+        // 예비창업만 허용하는 공고 → 초기창업 불가
+        return r('fail', `초기창업자는 지원 대상(${allowed})이 아니에요`)
+      }
+      if (rule.maxMonths != null) {
+        const months = profile.experienceMonths.value
+        if (months == null) return r('unknown', '창업 후 개월 수를 입력하지 않았어요')
+        return months <= rule.maxMonths
+          ? r('pass', `창업 ${months}개월로 ${rule.maxMonths}개월 이내 조건에 해당돼요`)
+          : r('fail', `창업 ${months}개월로 ${rule.maxMonths}개월 이내 조건에 해당하지 않아요`)
+      }
+      if (rule.allowed.includes('초기창업')) return r('pass', '초기창업자가 지원 대상에 포함돼요')
+      return r('unknown', `지원 대상(${allowed})에 해당하는지 업력 확인이 필요해요`)
     }
     case 'industry': {
       const cat = profile.industryCategory.value
@@ -116,7 +126,7 @@ export function isActionable(x: RuleResult, profile: UserProfile): boolean {
   if (rule.kind === 'region')
     return !!rule.sigungu?.length && rule.sido.length === 1 && rule.sido[0] === profile.sido.value
   if (rule.kind === 'bizStage')
-    return profile.bizStage.value === '예비창업' && rule.allowed.some((s) => TENURE[s] != null)
+    return profile.bizStage.value === '예비창업' && rule.allowed.includes('초기창업')
   return false
 }
 

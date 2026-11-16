@@ -94,7 +94,7 @@ export function ruleProfile(raw: string, overrides: SupportMatchRequest['overrid
     sido: { value: sido },
     // 칩으로 고친 시군구가 우선. 시도만 고치면 문장 속 시군구는 더 이상 맞지 않을 수 있으므로 비운다
     sigungu: { value: 'sigungu' in o ? ((o.sigungu as string | null) ?? null) : o.sido ? null : region.sigungu },
-    bizStage: { value: (o.bizStage as BizStage | undefined) ?? (/예비/.test(text) ? '예비창업' : null) },
+    bizStage: { value: (o.bizStage as BizStage | undefined) ?? (/예비창업|예비 창업/.test(text) ? '예비창업' : /창업|기창업|업력|사업자/.test(text) ? '초기창업' : null) },
     industryCategory: { value: (o.industryCategory as string | undefined) ?? extractCategory(text) },
     industryText: { value: null },
     targetGroups,

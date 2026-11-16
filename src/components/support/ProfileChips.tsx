@@ -17,7 +17,7 @@ type Props = {
   onOverride: (patch: Partial<Record<keyof UserProfile, unknown>>) => void
 }
 
-const BIZ_STAGES: BizStage[] = ['예비창업', '업력3년이하', '업력7년이하', '기창업']
+const BIZ_STAGES: BizStage[] = ['예비창업', '초기창업']
 
 /**
  * 칩 종류. 필수 입력값(required.ts)과 맞춘다 (나이·지역·창업 단계·업종).
@@ -188,7 +188,7 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
     if (k === 'sido') return v.sigungu ? [v.sido && shortSido(v.sido), v.sigungu].filter(Boolean).join(' ') : null
     if (k === 'bizStage') {
       if (!v.bizStage) return null
-      // 기창업은 개월 수까지 붙인다. 개월 수가 빠지면 표시로 알려준다
+      // 초기창업은 개월 수까지 붙인다. 개월 수가 빠지면 표시로 알려준다
       if (pre) return v.bizStage
       return v.experienceMonths != null ? `${v.bizStage} · ${v.experienceMonths}개월` : `${v.bizStage} · 개월 수 입력`
     }
@@ -277,7 +277,7 @@ export function ProfileChips({ text, profile, missing, disabled, onOverride }: P
           ))}
         </select>
       )
-    // 창업 단계 (+ 기창업이면 개월 수). 예비창업을 고르면 개월 수는 0으로 맞춘다
+    // 창업 단계 (+ 초기창업이면 개월 수). 예비창업을 고르면 개월 수는 0으로 맞춘다
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
         <select

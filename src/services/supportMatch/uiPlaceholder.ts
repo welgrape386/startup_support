@@ -45,7 +45,7 @@ const bojeungSample = (fetchedAt: string): SupportProgram => ({
     { kind: 'region', sido: ['인천광역시'], quote: '타시도 소상공인', section: '지원제외기준' },
     {
       kind: 'bizStage',
-      allowed: ['업력3년이하', '업력7년이하', '기창업'],
+      allowed: ['초기창업'],
       quote: '인천시에 사업자 등록을 한 소상공인',
       section: '지원조건',
     },
@@ -151,7 +151,7 @@ function screenSamples(today: string): SupportProgram[] {
     // 지금 신청 가능 (전국·인천 예비창업 / 서울 마포)
     s('youth-edu', '2026년 청년 창업 기초 교육과정 교육생 모집 공고', ['교육', '멘토링'], '만 19~39세 예비창업자 및 창업 3년 이내 대표자', [
       { kind: 'age', min: 19, max: 39 },
-      { kind: 'bizStage', allowed: ['예비창업', '업력3년이하'] },
+      { kind: 'bizStage', allowed: ['예비창업', '초기창업'], maxMonths: 36 },
     ], { agency: '창업진흥원', summary: '사업계획서 작성부터 세무·노무까지 8주 과정 교육과 1:1 멘토링', applyEnd: addDays(9) }),
     s('incheon-space', '2026년 인천 예비창업자 공유오피스 입주기업 모집 공고', ['공간'], '인천광역시 소재 예비창업자', [
       { kind: 'region', sido: ['인천광역시'] },
@@ -163,12 +163,12 @@ function screenSamples(today: string): SupportProgram[] {
     ], { agency: '마포구청 일자리경제과', summary: '창업 초기 임차료·장비 구입비 등 사업화 비용 일부 지원', amountMaxManwon: 2000, applyEnd: addDays(15) }),
     // 조건부 가능 (사업자 등록 / 같은 시도 안 시군구)
     s('sosang-loan', '2026년 소상공인 경영개선 자금 지원사업 통합 공고', ['융자'], '사업자 등록을 한 소상공인', [
-      { kind: 'bizStage', allowed: ['업력3년이하', '업력7년이하', '기창업'] },
+      { kind: 'bizStage', allowed: ['초기창업'] },
       { kind: 'targetGroup', anyOf: ['소상공인'] },
     ], { agency: '소상공인시장진흥공단', summary: '시설 개선·운영 자금을 저금리로 융자하고 경영 진단 컨설팅 연계', amountMaxManwon: 7000, applyEnd: addDays(30) }),
     s('incheon-relocate', '2026년 인천 초기 창업기업 사업장 환경개선 지원 공고', ['보조금'], '인천광역시 소재 창업 3년 이내 기업', [
       { kind: 'region', sido: ['인천광역시'] },
-      { kind: 'bizStage', allowed: ['업력3년이하'] },
+      { kind: 'bizStage', allowed: ['초기창업'], maxMonths: 36 },
     ], { agency: '인천경제산업정보테크노파크', summary: '간판·인테리어·안전설비 등 사업장 환경개선 비용 지원', amountMaxManwon: 1500, applyEnd: addDays(6) }),
     s('gangnam-space', '2026년 강남구 창업 공간 입주기업 모집 공고', ['공간'], '서울특별시 강남구 소재 예비창업자', [
       { kind: 'region', sido: ['서울특별시'], sigungu: ['강남구'] },

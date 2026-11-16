@@ -19,7 +19,7 @@ type Manual = {
 }
 
 const SIDO = ['서울특별시', '부산광역시', '대구광역시', '인천광역시', '광주광역시', '대전광역시', '울산광역시', '세종특별자치시', '경기도', '강원특별자치도', '충청북도', '충청남도', '전북특별자치도', '전라남도', '경상북도', '경상남도', '제주특별자치도']
-const BIZ: BizStage[] = ['예비창업', '업력3년이하', '업력7년이하', '기창업']
+const BIZ: BizStage[] = ['예비창업', '초기창업']
 const GROUPS: TargetGroup[] = ['청년', '여성', '장애인', '중장년', '소상공인', '재창업', '전체']
 const TYPES: SupportType[] = ['융자', '보조금', '보증', '교육', '멘토링', '공간', '사업화', '기타']
 const SECTIONS: RuleSection[] = ['지원대상', '지원조건', '지원제외기준', '기타']
@@ -144,7 +144,7 @@ async function extract(client: Anthropic, model: string, m: Manual): Promise<Ext
 const OFFLINE: Extraction = {
   rules: [
     { kind: 'region', section: '지원제외기준', quote: '타시도 소상공인', min: null, max: null, sido: ['인천광역시'], sigungu: [], allowed: null, include: null, exclude: null, anyOf: null, text: null },
-    { kind: 'bizStage', section: '지원조건', quote: '인천시에 사업자 등록을 한 소상공인', min: null, max: null, sido: null, sigungu: null, allowed: ['업력3년이하', '업력7년이하', '기창업'], include: null, exclude: null, anyOf: null, text: null },
+    { kind: 'bizStage', section: '지원조건', quote: '인천시에 사업자 등록을 한 소상공인', min: null, max: null, sido: null, sigungu: null, allowed: ['초기창업'], include: null, exclude: null, anyOf: null, text: null },
     { kind: 'targetGroup', section: '지원대상', quote: '인천시에 사업장을 둔 소상공인', min: null, max: null, sido: null, sigungu: null, allowed: null, include: null, exclude: null, anyOf: ['소상공인'], text: null },
     { kind: 'age', section: '지원대상', quote: '만 39세 이하 청년', min: null, max: 39, sido: null, sigungu: null, allowed: null, include: null, exclude: null, anyOf: null, text: null },
   ],
