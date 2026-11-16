@@ -5,12 +5,36 @@ Results intentionally use '확인 필요' and meta.dataSource='mock', even thoug
 program names and summaries come from the real database.
 """
 from datetime import date
+import logging
+import os
 import re
+from pathlib import Path
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session, selectinload
 from app.models import Announcement, AnnouncementFile
 from app.schemas import SupportMatchRequest
 from app.rag_search import search_ranked, TOP_K
+from app.condition_text import load_notices, from_judgment
+
+log = logging.getLogger(__name__)
+
+# 예은님 조건 JSON 경로 (환경변수로 덮어쓸 수 있음)
+_DEFAULT_CONDITIONS_PATH = Path(__file__).resolve().parents[2] / 'backend' / 'data' / 'conditions' / 'conditions_service_v4_업종확장.json'
+CONDITIONS_PATH = Path(os.environ.get('CONDITIONS_JSON', _DEFAULT_CONDITIONS_PATH))
+
+_notices: dict | None = None   # None: 아직 안 불러봄
+
+def _load_notices():
+    global _notices
+    if _notices is not None:
+        return _notices
+    try:
+        _notices = load_notices(CONDITIONS_PATH)
+        log.info('조건 JSON 로드 완료: %d건 (%s)', len(_notices), CONDITIONS_PATH)
+    except Exception as e:
+        log.warning('조건 JSON 로드 실패, 판정 없이 계속: %s', e)
+        _notices = {}
+    return _notices
 
 LOCAL_DEMO_NOTICE = '실제 공고 검색(단순 키워드) 데모입니다. 공고별 자격 조건 판정 AI가 아직 연결되지 않아 신청 가능 여부는 모두 확인 필요입니다.'
 REGIONS = [('서울','서울특별시'),('인천','인천광역시'),('경기','경기도'),('부산','부산광역시'),('대구','대구광역시'),('대전','대전광역시'),('광주','광주광역시'),('울산','울산광역시'),('세종','세종특별자치시'),('강원','강원특별자치도'),('충북','충청북도'),('충남','충청남도'),('충청북','충청북도'),('충청남','충청남도'),('전북','전북특별자치도'),('전남','전라남도'),('경북','경상북도'),('경남','경상남도'),('제주','제주특별자치도')]
@@ -268,6 +292,7 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
     else:
         candidates=[(score,a) for score,a in active if score>0]
         if not candidates:candidates=active
+    notices = _load_notices()
     results=[]
     for score,a in candidates[:limit]:
         program=_program(a,today)
@@ -275,10 +300,13 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         percent=max(1,min(80,20+score))
         days=(a.apply_end-today).days if a.apply_end else None
         search_rank = rag_rank[a.announcement_id]['rank'] if a.announcement_id in rag_rank else None
+        # 조건 JSON이 있는 공고는 has_conditions=True 표시 (판정 엔진 연결 전 준비)
+        has_conditions = a.announcement_id in notices
         results.append({
           'program':program,'verdict':'확인 필요','score':percent,'searchScore':float(score),'searchRank':search_rank,'judgmentScore':None,'rules':[],
           'headline':'관련 공고 검색됨 · 신청자격 확인 필요',
-          'reasons':[],'cautions':[], 'exceptions':[], 'daysLeft':days
+          'reasons':[],'cautions':[], 'exceptions':[], 'daysLeft':days,
+          'hasConditions': has_conditions,  # 프론트엔드에서 "조건 추출 완료" 뱃지 등에 활용 가능
         })
     return {
       'profile':profile,'missing':missing,'results':results,'conditional':[],'excluded':[],
