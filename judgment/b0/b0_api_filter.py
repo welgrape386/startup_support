@@ -14,6 +14,7 @@
      사업자 보유 = users.csv의 창업단계가 '기창업' (예전 사용자 파일의 사업자이력='현재보유'도 인정)
   3) 둘 다 통과하면 🟢, 아니면 🔴.
   --ignore-region 을 주면 1)을 건너뛴다(지역 제외 정답과 비교할 때 사용).
+  
 """
 import argparse, csv, json
 from collections import Counter
@@ -74,7 +75,7 @@ def region_ok(tags, u, sido_only=False):
 
 
 def emoji(label):
-    """'🟢 지금 신청 가능', '⚪️ 확인 필요' 등에서 앞 이모지만 남긴다."""
+    """'🟢 신청 가능', '⚪️ 확인 필요' 등에서 앞 이모지만 남긴다."""
     label = (label or '').strip().replace('️', '')
     return label[:1]
 
@@ -124,7 +125,7 @@ def main():
         if not ok_reg: why.append('지역 칸 불일치')
         if not ok_tgt: why.append('지원대상 칸(소상공인) 불일치')
         out.append({'사용자': g['사용자'], '공고ID': g['공고ID'],
-                    '예측': '🟢 지금 신청 가능' if ok_reg and ok_tgt else '🔴 해당 안 됨',
+                    '예측': '🟢 신청 가능' if ok_reg and ok_tgt else '🔴 신청 불가',
                     '근거 문장': '', '사유': ', '.join(why)})
     with open(a.out, 'w', encoding='utf-8-sig', newline='') as f:
         w = csv.DictWriter(f, fieldnames=['사용자', '공고ID', '예측', '근거 문장', '사유'])
