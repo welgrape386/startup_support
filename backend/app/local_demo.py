@@ -254,6 +254,7 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         sx=dict(stage=ex.get('창업단계_언급') if ex.get('창업단계_언급') in ('예비','개업') else '',
                 need=(nd[0] if isinstance(nd,list) and nd else (nd if isinstance(nd,str) else '')),
                 industry=sd.get('업종원문표현') or '',
+                industry_cat=profile['industryCategory']['value'] or '',  # 민지님 추출값 (카테고리)
                 age=str(ex.get('나이_언급') or ''))
     rag = search_ranked(request.text, user_gu=user_gu, **sx)
     rag_rank = {r['pblancId']: r for r in rag} if rag else {}

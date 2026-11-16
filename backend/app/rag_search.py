@@ -36,13 +36,24 @@ def _load():
     return _loaded
 
 
-def search_ranked(query, user_gu='', stage='', need='', industry='', age=''):
-    """[{pblancId, rank, score, evidence, evidence_from}, ...] 또는 실패 시 None."""
+def search_ranked(query, user_gu='', stage='', need='', industry='', industry_cat='', age=''):
+    """[{pblancId, rank, score, evidence, evidence_from}, ...] 또는 실패 시 None.
+
+    industry     : 업종 원문 표현 (예: "디저트 카페")  — 기존 인자
+    industry_cat : 업종 카테고리 (예: "음식·카페")    — 민지님 추출값. industry_map.csv 로드 시 활성화
+    """
     if not query or not _load():
         return None
     try:
         from search_service import search
-        return search(query, user_gu=user_gu or '', k=max(POOL, TOP_K), stage=stage or '', need=need or '', industry=industry or '', age=age or '')
+        import inspect
+        sig = inspect.signature(search)
+        kwargs = dict(user_gu=user_gu or '', k=max(POOL, TOP_K), stage=stage or '',
+                      need=need or '', industry=industry or '', age=age or '')
+        # search_service가 industry_cat 인자를 지원하면 같이 넘긴다 (industry_map.csv 로드 시 활성화)
+        if 'industry_cat' in sig.parameters:
+            kwargs['industry_cat'] = industry_cat or ''
+        return search(query, **kwargs)
     except Exception as e:
         log.warning('RAG 검색 중 오류, 키워드 검색으로 대체합니다: %s', e)
         return None
