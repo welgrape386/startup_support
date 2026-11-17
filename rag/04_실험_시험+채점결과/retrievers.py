@@ -254,8 +254,12 @@ LOCAL_BIZ = re.compile(r"카페|음식|식당|치킨|분식|떡볶이|디저트|
 FIELD_ONLY = {"핀테크": r"핀테크|금융서비스", "물산업": r"물산업", "기후": r"기후|탄소|넷제로", "딥테크": r"딥테크|출연\(연\)",
               "위치정보": r"위치정보", "ICT": r"ICT"}
 
-def special_target(pid, question, stage="", industry="", age=""):
-    """특수 대상이면 이유, 아니면 None. 공고명 + 사업개요 첫 '☞' 줄(지원 대상)을 봄"""
+TECH_CATS = {"IT·소프트웨어", "첨단기술"}   # 이 업종 카테고리면 기술 쪽 사용자 (#33)
+
+def special_target(pid, question, stage="", industry="", age="", tech=False, ind_ok=False):
+    """특수 대상이면 이유, 아니면 None. 공고명 + 사업개요 첫 '☞' 줄(지원 대상)을 봄
+    tech=True면 기술 쪽 사용자로 보고 핀테크·딥테크 같은 분야 공고를 안 내림
+    ind_ok=True면 업종 매핑상 맞는 공고라 업종 단어 규칙(기술창업·분야 전용)은 안 봄 (#34)"""
     d = DOC_BY_ID[pid]
     parts = d["summary"].split("☞")
     t = d["pblancNm"] + " " + (parts[1] if len(parts) > 1 else "")
@@ -266,9 +270,9 @@ def special_target(pid, question, stage="", industry="", age=""):
         return "주관기관"
     if stage == "예비" and re.search(r"폐업|위기 소상공인|재기|희망리턴", t) and "예비창업" not in t:
         return "폐업·위기"
-    if re.search(r"기술창업\s?기반", t) and LOCAL_BIZ.search(user):
+    if not ind_ok and re.search(r"기술창업\s?기반", t) and LOCAL_BIZ.search(user):
         return "기술창업"
-    if not TECH_USER.search(user):
+    if not ind_ok and not tech and not TECH_USER.search(user):
         for k, pat in FIELD_ONLY.items():
             if re.search(pat, t) and not re.search(pat, user):
                 return k
@@ -283,6 +287,13 @@ def industry_mismatch(pid, user_cats):
         return False
     allow, deny = INDUSTRY[pid]
     return (allow != {"전체"} and not (allow & user_cats)) or bool(deny & user_cats)
+
+def industry_allowed(pid, user_cats):
+    """공고 허용 업종(전체 아님)에 사용자 업종이 하나라도 있으면 True. 제외에 걸리면 False (#34)"""
+    if not user_cats or pid not in INDUSTRY:
+        return False
+    allow, deny = INDUSTRY[pid]
+    return allow != {"전체"} and bool(allow & user_cats) and not (deny & user_cats)
 
 def _load_industry():
     if not INDUSTRY_MAP.exists():
@@ -338,36 +349,44 @@ NEED_HINT_SHORT = {
 class NeedBoost:
     """
     상위 n개 안에서만 순서를 바꿈 (Recall@n은 그대로)
-    - 원하는 지원(need)과 공고 카테고리가 같으면 점수 + bonus
+    - 원하는 지원(need)과 공고 카테고리가 같으면 점수 + bonus (need 2개면 "자금|인력", 하나라도 맞으면 한 번만)
     - special_penalty가 있으면 특수 대상 공고 점수 - penalty
     - industry_penalty가 있으면 업종 안 맞는 공고 점수 - penalty (industry_cat: "음식·카페|도소매·판매")
     - age_rule이면 나이 조건 안 맞는 공고도 특수 대상처럼 내림 (특수 대상과 겹치면 한 번만)
+    - tech_cat이면 업종 카테고리가 IT·소프트웨어·첨단기술이거나 '웹'이라고 한 사용자는 기술 쪽으로 봄 (#33)
+    - industry_first면 업종 매핑이 사용자 업종을 허용한 공고는 업종 단어 규칙으로 안 내림 (#34)
     """
     def __init__(self, first, scorer, n=20, bonus=0.01, special_penalty=0.0, industry_penalty=0.0, age_rule=False,
-                 need_hint=False):
+                 need_hint=False, tech_cat=False, industry_first=False):
         self.first, self.scorer, self.n, self.bonus = first, scorer, n, bonus
         self.penalty = special_penalty
         self.ind_penalty = industry_penalty
         self.age_rule = age_rule
+        self.tech_cat = tech_cat
+        self.industry_first = industry_first
         # 원하는 지원 단어를 질문 뒤에 붙여서 검색. True면 NEED_HINT, dict면 그 단어
         self.need_hint = NEED_HINT if need_hint is True else (need_hint or {})
         with open(CATEGORY, encoding="utf-8-sig") as f:
             self.cats = {r["pblancId"]: {c for c, v in r.items() if v == "1"} for r in csv.DictReader(f)}
     def search(self, query, k=10, user_gu="", stage="", need="", industry="", age="", industry_cat=""):
         question = query                # 특수 대상 판단은 원래 질문으로
-        if need in self.need_hint:
-            query = f"{query} {self.need_hint[need]}"
+        needs = {n for n in need.split("|") if n and n != "미지정"}   # 원하는 지원 1~2개, "|"로 구분 (#35)
+        hints = [self.need_hint[n] for n in need.split("|") if n in self.need_hint]
+        if hints:
+            query = f"{query} {' '.join(hints)}"
         cands = self.first.search(query, self.n, user_gu, stage)
-        has_need = need and need != "미지정"
+        has_need = bool(needs)
         user_cats = set(filter(None, industry_cat.split("|"))) if self.ind_penalty else set()
+        tech = self.tech_cat and (bool(TECH_CATS & set(industry_cat.split("|"))) or "웹" in f"{industry} {question}")
         if not has_need and not self.penalty and not user_cats:
             return cands[:k]
         score = self.scorer.scores(query)
         def adjusted(p):
             s = score[p]
-            if has_need and need in self.cats.get(p, ()):
+            if has_need and needs & self.cats.get(p, set()):   # 하나라도 맞으면 한 번만 올림
                 s += self.bonus
-            if self.penalty and (special_target(p, question, stage, industry, age)
+            ok = self.industry_first and industry_allowed(p, set(filter(None, industry_cat.split("|"))))
+            if self.penalty and (special_target(p, question, stage, industry, age, tech, ok)
                                  or (self.age_rule and age_mismatch(p, age))):
                 s -= self.penalty
             if user_cats and industry_mismatch(p, user_cats):

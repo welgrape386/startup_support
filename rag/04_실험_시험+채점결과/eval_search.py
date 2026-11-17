@@ -63,7 +63,11 @@ age = NeedBoost(region_g, hy, n=40, special_penalty=0.01, industry_penalty=0.01,
 default = NeedBoost(region_g, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
                     need_hint=NEED_HINT_SHORT)
 local = NeedBoost(region_l, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
-                  need_hint=NEED_HINT_SHORT)   # search_service.py와 같음 (#32)
+                  need_hint=NEED_HINT_SHORT)
+tech = NeedBoost(region_l, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
+                 need_hint=NEED_HINT_SHORT, tech_cat=True)
+ind_first = NeedBoost(region_l, hy, n=40, special_penalty=0.01, industry_penalty=0.01, age_rule=True,
+                      need_hint=NEED_HINT_SHORT, tech_cat=True, industry_first=True)   # search_service.py와 같음 (#34)
 
 BASE = "지금 기본"
 SEARCHERS = [
@@ -77,7 +81,9 @@ SEARCHERS = [
     ("업종 내리기",              lambda q: industry.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
     ("나이 조건 내리기",          lambda q: age.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
     ("원하는 지원 단어 붙이기",     lambda q: default.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
-    (BASE,                    lambda q: local.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
+    ("지방 운영 내리기",          lambda q: local.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
+    ("기술 사용자 업종으로",       lambda q: tech.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
+    (BASE,                    lambda q: ind_first.search(q.question, K, q.region, q.stage, q.need, q.industry, q.age, q.industry_cat)),
     # 새 실험은 여기에
 ]
 NEW = SEARCHERS[-1][0]
