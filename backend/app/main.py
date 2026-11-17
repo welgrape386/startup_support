@@ -13,8 +13,13 @@ from app import extended_models  # register integrated ERD models
 from app.schemas import AnnouncementListResponse, AnnouncementSummary, AnnouncementDetail, AttachmentResponse, ConditionResponse, TextResponse, SupportMatchRequest, ApiError
 
 app = FastAPI(title='Startup Support Backend API', version='0.1.0', description='공고 및 AI 산출물 데이터 조회용 FastAPI 초안. AI 판정 미연동.')
-# Vite's local dev server. Explicit origins, not wildcard with credentials.
-app.add_middleware(CORSMiddleware, allow_origins=['http://localhost:5173', 'http://127.0.0.1:5173'], allow_credentials=False, allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
+# Vite's local dev server + Vercel production. VITE_FRONTEND_ORIGIN overrides for custom domains.
+import os as _os
+_frontend_origin = _os.getenv('FRONTEND_ORIGIN', '')
+_allowed_origins = ['http://localhost:5173', 'http://127.0.0.1:5173']
+if _frontend_origin:
+    _allowed_origins.extend([o.strip() for o in _frontend_origin.split(',') if o.strip()])
+app.add_middleware(CORSMiddleware, allow_origins=_allowed_origins, allow_credentials=False, allow_methods=['GET', 'POST'], allow_headers=['Content-Type'])
 
 
 def summary(a: Announcement, text_status=None, cond_status=None):

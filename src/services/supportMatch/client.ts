@@ -42,7 +42,8 @@ export async function fetchSupportMatch(req: SupportMatchRequest): Promise<Suppo
 
   let res: Response
   try {
-    res = await fetch('/api/support-match', {
+    const apiBase = import.meta.env.VITE_API_BASE_URL ?? ''
+    res = await fetch(`${apiBase}/api/support-match`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...req, text }),
