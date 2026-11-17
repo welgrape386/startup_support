@@ -11,10 +11,10 @@
      구 중 하나가 그 구여야 통과 (해시태그로는 거주지 기준인지 사업장 기준인지 알 수 없어
      셋 중 하나만 맞아도 통과). --sido-only 를 주면 예전처럼 시도까지만 본다.
   2) 지원대상: '소상공인'이면 사업자 보유자만 통과, 그 밖의 값('창업벤처' 등)은 모두 통과.
-     사업자 보유 = users.csv의 창업단계가 '기창업' (예전 사용자 파일의 사업자이력='현재보유'도 인정)
+     사업자 보유 = users.csv의 창업단계가 '초기창업' (예전 값 '기창업', 예전 사용자 파일의 사업자이력='현재보유'도 인정)
   3) 둘 다 통과하면 🟢, 아니면 🔴.
   --ignore-region 을 주면 1)을 건너뛴다(지역 제외 정답과 비교할 때 사용).
-  
+
 """
 import argparse, csv, json
 from collections import Counter
@@ -58,7 +58,7 @@ def user_places(u, key):
 
 def has_business(u):
     """사업자 보유 여부. 새 users.csv는 창업단계, 예전 파일은 사업자이력 칸을 쓴다."""
-    return u.get('사업자이력') == '현재보유' or u.get('창업단계') == '기창업'
+    return u.get('사업자이력') == '현재보유' or u.get('창업단계') in ('초기창업', '기창업')
 
 
 def region_ok(tags, u, sido_only=False):
