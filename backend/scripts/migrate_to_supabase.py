@@ -88,13 +88,20 @@ def migrate_table(sqlite_conn, pg_conn, table: str):
     # 기존 데이터 삭제 후 삽입 (idempotent)
     pg_conn.execute(sa.text(f'DELETE FROM "{table}"'))
 
+    # 컬럼명에 한글·특수문자 포함 가능 → sa.text()의 :param 방식 대신
+    # psycopg3 execute_many 방식으로 삽입 (% 포맷 사용)
     col_list = ', '.join(f'"{c}"' for c in valid_cols)
-    placeholders = ', '.join(f':{c}' for c in valid_cols)
-    stmt = sa.text(f'INSERT INTO "{table}" ({col_list}) VALUES ({placeholders})')
+    # psycopg3은 %s 플레이스홀더 사용
+    placeholders = ', '.join(['%s'] * len(valid_cols))
+    raw_sql = f'INSERT INTO "{table}" ({col_list}) VALUES ({placeholders})'
 
     BATCH = 100
-    for i in range(0, len(cleaned), BATCH):
-        pg_conn.execute(stmt, cleaned[i:i+BATCH])
+    raw_conn = pg_conn.connection.dbapi_connection
+    with raw_conn.cursor() as cur:
+        for i in range(0, len(cleaned), BATCH):
+            batch = cleaned[i:i+BATCH]
+            values = [[row[c] for c in valid_cols] for row in batch]
+            cur.executemany(raw_sql, values)
 
     print(f'  {table}: {len(cleaned)}건 이전 완료')
 
@@ -103,8 +110,12 @@ def main():
     with sqlite_engine.connect() as sc, pg_engine.connect() as pc:
         for table in TABLES_IN_ORDER:
             try:
+                # 각 테이블을 savepoint로 격리 → 한 테이블 실패해도 다음 테이블 진행 가능
+                pc.execute(sa.text('SAVEPOINT sp_migrate'))
                 migrate_table(sc, pc, table)
+                pc.execute(sa.text('RELEASE SAVEPOINT sp_migrate'))
             except Exception as e:
+                pc.execute(sa.text('ROLLBACK TO SAVEPOINT sp_migrate'))
                 print(f'  {table}: ❌ 오류 - {e}')
         pc.commit()
     print('=== 완료 ===')
