@@ -69,6 +69,8 @@ class Announcement(Base):
     submission_docs_json: Mapped[list | None] = mapped_column(FlexibleJSON)
     bonus_points_json: Mapped[list | None] = mapped_column(FlexibleJSON)
     rounds_json: Mapped[list | None] = mapped_column(FlexibleJSON)
+    self_funding_json: Mapped[dict | None] = mapped_column(FlexibleJSON)   # 자부담
+    info_tracks_json: Mapped[list | None] = mapped_column(FlexibleJSON)    # 안내정보 트랙
     reviewed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     collected_at: Mapped[datetime | None] = mapped_column(DateTime)
     files: Mapped[list['AnnouncementFile']] = relationship(back_populates='announcement', cascade='all, delete-orphan')

@@ -196,7 +196,8 @@ def _program(a, today):
       'id':a.announcement_id,'source':'bizinfo','portal':'기업마당',
       'sourceId':a.announcement_id,'title':a.title,'agency':a.agency or '기관 정보 미상',
       'supportTypes':_support_types(a),'support_types':a.support_types or [],'rolling':a.rolling,'status':status,
-      'duplicatePolicy':{'status':'미확인'},
+      # 중복지원: DB에 값 있으면 사용, 없으면 미확인
+      'duplicatePolicy': a.duplicate_policy_json or {'status':'미확인'},
       'summary':_card_summary(a.summary) or a.title,'url':a.announcement_url or '',
       'fields':fields,'fetchedAt':(a.fetched_updated_at or a.fetched_created_at or today.isoformat())[:10],
       'reviewed':False,'attachmentFiles':files,
@@ -212,6 +213,17 @@ def _program(a, today):
     if a.apply_end:data['applyEnd']=a.apply_end.isoformat()
     if a.contact:data['contact']=a.contact
     if a.application_url:data['applyUrl']=a.application_url
+    # 초록색 칸: 원문 추출값 (예은님) - DB에 채워지면 자동 반영
+    if a.amount_max_manwon:   data['amountMaxManwon']  = a.amount_max_manwon
+    if a.total_budget_text:   data['totalBudgetText']  = a.total_budget_text
+    if a.interest_rate:       data['interestRate']     = a.interest_rate
+    if a.support_detail:      data['supportDetail']    = a.support_detail
+    if a.submission_docs_json:data['submissionDocs']   = a.submission_docs_json
+    if a.bonus_points_json:   data['bonusPoints']      = a.bonus_points_json
+    if a.rounds_json:         data['rounds']           = a.rounds_json
+    # 갈색 칸: 새 필드
+    if a.self_funding_json:   data['selfFunding']      = a.self_funding_json
+    if a.info_tracks_json:    data['infoTracks']       = a.info_tracks_json
     return data
 
 def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP_K, as_of=None, extracted=None):

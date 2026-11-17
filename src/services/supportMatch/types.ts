@@ -73,6 +73,10 @@ export type SupportProgram = {
   attachmentFiles?: { name: string; url: string }[]  // TODO: API 필드
   /** 차수형 모집 일정 */
   rounds?: { round: string; start: string; end: string; status: '접수중' | '마감' | '예정' }[]  // TODO: API 필드
+  /** 자부담 (공고 원문 추출) */
+  selfFunding?: { status: '있음' | '언급없음'; rate?: number; detail?: string }
+  /** 안내정보 트랙 (자금·분야마다 금액·금리·서류가 다를 때) */
+  infoTracks?: { name: string; amountMaxManwon?: number; interestRate?: string; submissionDocs?: string[] }[]
   /** 포털 원문 항목 그대로 (quote 검증 대상) */
   fields: Record<string, string>
   fetchedAt: string
