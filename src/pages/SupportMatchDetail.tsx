@@ -133,7 +133,7 @@ export function SupportMatchDetail() {
               {p.operator && <InfoRow label="수행기관" value={p.operator} />}
               <dt className="whitespace-nowrap font-semibold text-muted">지원 유형</dt>
               <dd className="flex flex-wrap gap-1">
-                {p.supportTypes.map((t) => (
+                {(p.support_types ?? []).map((t) => (
                   <Badge key={t} tone="info">{t}</Badge>
                 ))}
               </dd>
