@@ -76,8 +76,8 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
       <div className="flex flex-1 flex-col gap-4 p-6">
         <div className="flex flex-wrap items-center gap-2">
           <DayBadge daysLeft={r.daysLeft} unknownPeriod={p.status === '기간 확인 필요'} />
-          {p.supportTypes.map((t) => (
-            <Badge key={t} tone={t === '융자' ? 'violet' : 'info'}>
+          {(p.support_types ?? []).map((t) => (
+            <Badge key={t} tone="info">
               {t}
             </Badge>
           ))}
