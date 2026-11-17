@@ -55,6 +55,10 @@ export type SupportProgram = {
   supportDetail?: string
   applyStart?: string
   applyEnd?: string
+  /** 원문에서 추출한 접수 시작일. API 날짜와 다를 경우 이 값을 우선 표시한다 */
+  applyStartOrig?: string
+  /** 원문에서 추출한 접수 마감일. API 날짜와 다를 경우 이 값을 우선 표시한다 */
+  applyEndOrig?: string
   /** 연중·수시 모집 → daysLeft=null, "상시 모집" */
   rolling: boolean
   status: '모집중' | '모집예정' | '마감' | '기간 확인 필요'

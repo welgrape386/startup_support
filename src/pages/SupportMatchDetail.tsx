@@ -138,9 +138,19 @@ export function SupportMatchDetail() {
                 ))}
               </dd>
               <InfoRow label="판정" value={verdictLabel[result.verdict]} />
-              {p.fields['신청방법'] && <InfoRow label="지원 방법" value={p.fields['신청방법']} />}
+              {p.fields['신청방법'] && (
+                <>
+                  <dt className="whitespace-nowrap font-semibold text-muted">지원 방법</dt>
+                  <dd className="text-ink whitespace-pre-line" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>{p.fields['신청방법']}</dd>
+                </>
+              )}
               {p.fields['지원대상'] && <InfoRow label="지원 대상" value={p.fields['지원대상']} />}
-              {p.contact && <InfoRow label="문의" value={p.contact} />}
+              {p.contact && (
+                <InfoRow
+                  label="문의"
+                  value={p.contact.replace(/,\s*/g, ' / ')}
+                />
+              )}
             </dl>
           </Card>
 
@@ -215,7 +225,10 @@ export function SupportMatchDetail() {
             ) : (
               <div className="flex flex-wrap items-center gap-3">
                 <p className="text-sm text-ink">
-                  {p.applyStart ? fmtDate(p.applyStart) : '—'} ~ {p.applyEnd ? fmtDate(p.applyEnd) : '—'}
+                  {/* 원문 날짜 우선, 없으면 API 날짜 사용 */}
+                  {(p.applyStartOrig ?? p.applyStart) ? fmtDate(p.applyStartOrig ?? p.applyStart ?? '') : '—'}
+                  {' ~ '}
+                  {(p.applyEndOrig ?? p.applyEnd) ? fmtDate(p.applyEndOrig ?? p.applyEnd ?? '') : '—'}
                 </p>
                 <DdayBadge daysLeft={result.daysLeft} />
               </div>
