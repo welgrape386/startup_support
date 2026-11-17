@@ -68,18 +68,29 @@ def migrate_table(sqlite_conn, pg_conn, table: str):
     if skipped:
         print(f'  {table}: 컬럼 제외 {skipped}')
 
-    # JSON 필드 직렬화 (SQLite는 문자열로 저장된 경우 있음)
+    # 컬럼 타입 조회 (boolean 변환에 사용)
+    res = pg_conn.execute(sa.text(
+        "SELECT column_name, data_type FROM information_schema.columns "
+        f"WHERE table_schema='public' AND table_name='{table}' ORDER BY ordinal_position"
+    ))
+    pg_col_types = {r[0]: r[1] for r in res}
+
     def fix_row(row):
         fixed = {}
         for c in valid_cols:
             v = row[c]
-            if isinstance(v, str):
+            dtype = pg_col_types.get(c, '')
+            # dict/list → JSON 문자열 (psycopg3 %s는 dict 직접 불가)
+            if isinstance(v, (dict, list)):
+                v = json.dumps(v, ensure_ascii=False)
+            elif isinstance(v, str):
                 stripped = v.strip()
                 if stripped and stripped[0] in ('{', '['):
-                    try:
-                        v = json.loads(v)
-                    except Exception:
-                        pass
+                    # JSON 문자열은 그대로 유지 (pg는 text/jsonb 모두 문자열 수용)
+                    pass
+            # SQLite 0/1 정수 → PostgreSQL boolean
+            if dtype == 'boolean' and isinstance(v, int):
+                v = bool(v)
             fixed[c] = v
         return fixed
 
