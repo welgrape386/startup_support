@@ -1,6 +1,13 @@
 from logging.config import fileConfig
 import os
+from pathlib import Path
 from alembic import context
+# .env 파일 자동 로드 (backend/.env)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parents[1] / '.env')
+except ImportError:
+    pass
 from sqlalchemy import engine_from_config, pool
 from app.db import Base
 from app import models, extended_models  # noqa: F401 register all tables
