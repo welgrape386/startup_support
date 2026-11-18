@@ -1,0 +1,127 @@
+[
+  {
+    "input_text": "만 28세고 망원동 살아요. 성수동에서 베이글 가게 열려고 준비 중이에요. 인테리어 자금이 필요해요.",
+    "res_sido": "서울특별시",
+    "res_sigungu": "마포구",
+    "res_raw": "망원동",
+    "res_candidates": null,
+    "plan_sido": "서울특별시",
+    "plan_sigungu": "성동구",
+    "plan_raw": "성수동",
+    "plan_candidates": null,
+    "biz_sido": null,
+    "biz_sigungu": null,
+    "biz_raw": null,
+    "biz_candidates": null,
+    "age": 28,
+    "stage": "예비창업",
+    "biz_months": 0,
+    "industry_cat": [
+      "음식·카페"
+    ],
+    "biz_type": null,
+    "gender": null,
+    "special_quals": null,
+    "industry_raw": "베이글 가게",
+    "need": [
+      "자금"
+    ],
+    "ask_fields": null
+  },
+  {
+    "input_text": "만 30세고 서울 중구에 살아요. 중구에서 카페를 2년 했는데 판로도 넓히고 직원도 뽑고 싶어요.",
+    "res_sido": "서울특별시",
+    "res_sigungu": "중구",
+    "res_raw": "중구",
+    "res_candidates": null,
+    "plan_sido": null,
+    "plan_sigungu": null,
+    "plan_raw": null,
+    "plan_candidates": null,
+    "biz_sido": "서울특별시",
+    "biz_sigungu": "중구",
+    "biz_raw": "중구",
+    "biz_candidates": null,
+    "age": 30,
+    "stage": "초기창업",
+    "biz_months": 24,
+    "industry_cat": [
+      "음식·카페"
+    ],
+    "biz_type": null,
+    "gender": null,
+    "special_quals": null,
+    "industry_raw": "카페",
+    "need": [
+      "홍보·판매",
+      "인력"
+    ],
+    "ask_fields": null
+  },
+  {
+    "input_text": "신사동에 사는 32살이에요. 꽃집을 차리고 싶어요.",
+    "res_sido": "서울특별시",
+    "res_sigungu": null,
+    "res_raw": "신사동",
+    "res_candidates": [
+      "강남구",
+      "관악구",
+      "은평구"
+    ],
+    "plan_sido": null,
+    "plan_sigungu": null,
+    "plan_raw": null,
+    "plan_candidates": null,
+    "biz_sido": null,
+    "biz_sigungu": null,
+    "biz_raw": null,
+    "biz_candidates": null,
+    "age": 32,
+    "stage": "예비창업",
+    "biz_months": 0,
+    "industry_cat": [
+      "도소매·판매"
+    ],
+    "biz_type": null,
+    "gender": null,
+    "special_quals": null,
+    "industry_raw": "꽃집",
+    "need": null,
+    "ask_fields": [
+      "거주지",
+      "창업예정지",
+      "need"
+    ]
+  },
+  {
+    "input_text": "지원사업 알려주세요.",
+    "res_sido": null,
+    "res_sigungu": null,
+    "res_raw": null,
+    "res_candidates": null,
+    "plan_sido": null,
+    "plan_sigungu": null,
+    "plan_raw": null,
+    "plan_candidates": null,
+    "biz_sido": null,
+    "biz_sigungu": null,
+    "biz_raw": null,
+    "biz_candidates": null,
+    "age": null,
+    "stage": null,
+    "biz_months": null,
+    "industry_cat": null,
+    "biz_type": null,
+    "gender": null,
+    "special_quals": null,
+    "industry_raw": null,
+    "need": null,
+    "ask_fields": [
+      "만나이",
+      "거주지",
+      "창업예정지",
+      "업종",
+      "need"
+    ]
+  }
+]
