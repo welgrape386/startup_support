@@ -25,12 +25,17 @@ interface ExtractResult {
   stage: string | null
   res_sido: string | null
   res_sigungu: string | null
+  res_raw: string | null
+  res_candidates: string[] | null
   plan_sido: string | null
   plan_sigungu: string | null
+  plan_raw: string | null
   plan_candidates: string[] | null
   biz_sido: string | null
   biz_sigungu: string | null
+  biz_raw: string | null
   biz_candidates: string[] | null
+  biz_months: number | null
   industry_cat: string[] | null
   industry_raw: string | null
   need: string[] | null
@@ -92,24 +97,50 @@ export function SupportMatch() {
   const p = ruleProfile(text, undefined)
 
   // 인식된 정보 (extracted 우선, fallback은 ruleProfile)
-  const readAge = extracted ? extracted.result.age : p.age.value
-  const readStage = extracted ? extracted.result.stage : p.bizStage.value
+  const r = extracted?.result ?? null
 
-  const readSido = extracted
-    ? (extracted.result.plan_sido ?? extracted.result.biz_sido ?? extracted.result.res_sido)
-    : p.sido.value
-  const readGu = extracted
-    ? (extracted.result.plan_sigungu ?? extracted.result.biz_sigungu ?? extracted.result.res_sigungu)
-    : p.sigungu.value
-  const readIndustry = extracted
-    ? (extracted.result.industry_raw ?? (extracted.result.industry_cat?.[0] ?? null))
+  const readAge = r ? r.age : p.age.value
+  const readStage = r ? r.stage : p.bizStage.value
+
+  // 거주지: res
+  const readResSido = r?.res_sido ?? null
+  const readResGu = r?.res_sigungu ?? null
+  // 창업예정지: plan (예비창업일 때)
+  const readPlanSido = r?.plan_sido ?? null
+  const readPlanGu = r?.plan_sigungu ?? null
+  // 사업장: biz (초기창업일 때)
+  const readBizSido = r?.biz_sido ?? null
+  const readBizGu = r?.biz_sigungu ?? null
+  // fallback용 단일 지역
+  const readSido = readPlanSido ?? readBizSido ?? readResSido ?? (extracted ? null : p.sido.value)
+  const readGu = readPlanGu ?? readBizGu ?? readResGu ?? (extracted ? null : p.sigungu.value)
+
+  const readIndustry = r
+    ? (r.industry_raw ? `${r.industry_cat?.[0] ?? ''} (${r.industry_raw})`.trim() : (r.industry_cat?.[0] ?? null))
     : p.industryCategory.value
+  const readNeed = r?.need ?? null
+  const readBizMonths = r?.biz_months ?? null
 
+  // 인식된 정보 chip 목록 (나애님 명세 기준)
   const read = [
-    { label: '나이', value: readAge != null ? `${readAge}세` : null },
-    { label: '지역', value: readSido ? [shortSido(readSido), readGu].filter(Boolean).join(' ') : null },
-    { label: '업종', value: readIndustry },
+    { label: '나이', value: readAge != null ? `만 ${readAge}세` : null },
+    // 거주지 (res_sigungu 있을 때만, 없으면 단일 지역으로 fallback)
+    ...(readResGu
+      ? [{ label: '거주', value: `${readResGu}` }]
+      : !readPlanGu && !readBizGu && readSido
+        ? [{ label: '지역', value: [shortSido(readSido as string), readGu].filter(Boolean).join(' ') }]
+        : []),
+    // 창업예정지 (예비창업)
+    ...(readPlanGu ? [{ label: '창업 예정', value: readPlanGu }] : []),
+    // 사업장 (초기창업)
+    ...(readBizGu ? [{ label: '사업장', value: readBizGu }] : []),
     { label: '단계', value: readStage },
+    // 업력 (초기창업일 때)
+    ...(readBizMonths != null ? [{ label: '창업', value: `${readBizMonths}개월` }] : []),
+    // 업종
+    { label: '업종', value: readIndustry },
+    // 필요 지원
+    ...(readNeed && readNeed.length > 0 ? [{ label: '지원', value: readNeed.join('·') }] : []),
   ]
 
   // 빠진 정보: extracted.ask_fields 우선, fallback은 하드코딩 4개
@@ -122,9 +153,14 @@ export function SupportMatch() {
         !p.industryCategory.value && '업종(예: 카페, 음식점)',
       ].filter((x): x is string => Boolean(x))
 
-  // 겹치는 동 안내: plan_candidates 또는 biz_candidates가 있을 때
-  const ambiguousCandidates =
-    extracted?.result.plan_candidates ?? extracted?.result.biz_candidates ?? null
+  // 겹치는 동 안내: res/plan/biz candidates 모두 체크
+  const ambiguousList: { raw: string; candidates: string[] }[] = []
+  if (r?.res_candidates && r.res_candidates.length > 1)
+    ambiguousList.push({ raw: r.res_raw ?? '거주지', candidates: r.res_candidates })
+  if (r?.plan_candidates && r.plan_candidates.length > 1)
+    ambiguousList.push({ raw: r.plan_raw ?? '창업예정지', candidates: r.plan_candidates })
+  if (r?.biz_candidates && r.biz_candidates.length > 1)
+    ambiguousList.push({ raw: r.biz_raw ?? '사업장', candidates: r.biz_candidates })
 
   const complete = useCallback(() => {
     const req = { text: text.trim() }
@@ -163,7 +199,7 @@ export function SupportMatch() {
             <ul className="text-[13px] leading-relaxed text-ink space-y-0.5">
               <li>· 나이 <span className="text-muted">(만 나이)</span></li>
               <li>· 지역 <span className="text-muted">(거주지 구 + 사업장/창업예정 구)</span></li>
-              <li>· 창업 단계 <span className="text-muted">(기창업자/예비창업자 + 개월 수)</span></li>
+              <li>· 창업 단계 <span className="text-muted">(초기창업자/예비창업자 + 개월 수)</span></li>
               <li>· 업종</li>
             </ul>
           </div>
@@ -228,11 +264,11 @@ export function SupportMatch() {
                   {!tooShort && missing.length > 0 && (
                     <span className="text-warn"> · 추가하면 더 정확해요: {missing.join(', ')}</span>
                   )}
-                  {ambiguousCandidates && ambiguousCandidates.length > 1 && (
-                    <span className="text-warn">
-                      {' '}· 동 이름이 여러 구에 있어요 ({ambiguousCandidates.join(', ')} 중 하나) — 구 이름으로 적어주세요
+                  {ambiguousList.map(({ raw, candidates }) => (
+                    <span key={raw} className="text-warn">
+                      {' '}· {raw}은(는) {candidates.join(' · ')}에 있어요 — 구 이름으로 적어주세요
                     </span>
-                  )}
+                  ))}
                 </>
               )}
             </p>
