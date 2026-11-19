@@ -18,7 +18,8 @@ def create_db_engine(url: str | None = None):
     if url.startswith('sqlite:///') and url != 'sqlite:///:memory:':
         db_file = url.removeprefix('sqlite:///')
         Path(db_file).parent.mkdir(parents=True, exist_ok=True)
-    engine = create_engine(url, connect_args={'check_same_thread': False} if url.startswith('sqlite:') else {}, pool_pre_ping=True)
+    connect_args = {'check_same_thread': False} if url.startswith('sqlite:') else {'prepare_threshold': None}
+    engine = create_engine(url, connect_args=connect_args, pool_pre_ping=True)
     if url.startswith('sqlite:'):
         from sqlalchemy import event
         @event.listens_for(engine, 'connect')
