@@ -25,5 +25,14 @@ def main():
             sys.argv=old
     # No rewrite if DB already populated; normal idempotent sync maps only.
     import_mappings(BASE/'data/region_map.csv', BASE/'data/category_map.csv')
+    # 예은님 조건 JSON 로드 (conditions 테이블, 항상 최신 파일로 upsert)
+    conditions_file = BASE/'data/conditions/conditions_service_v4_업종확장.json'
+    if conditions_file.exists():
+        saved = sys.argv
+        try:
+            sys.argv = ['ingest', '--conditions', str(conditions_file)]
+            ingest_main()
+        finally:
+            sys.argv = saved
     print('DB bootstrap complete')
 if __name__=='__main__':main()
