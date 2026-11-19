@@ -320,13 +320,28 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
     # 추출 결과가 있을 때만 검색 조건으로 넘긴다. 없으면 빈 값 (그 조건은 검색에서 빠짐)
     sx={}
     if extracted is not None:
-        sd=extracted.get('검색정보') or {}; ex=extracted.get('추가추출값') or {}
-        nd=sd.get('필요지원') or []
-        sx=dict(stage=ex.get('창업단계_언급') if ex.get('창업단계_언급') in ('예비','개업') else '',
-                need=(nd[0] if isinstance(nd,list) and nd else (nd if isinstance(nd,str) else '')),
-                industry=sd.get('업종원문표현') or '',
-                industry_cat=profile['industryCategory']['value'] or '',  # 민지님 추출값 (카테고리)
-                age=str(ex.get('나이_언급') or ''))
+        # 나애님 adapter.to_legacy()가 _rag 키로 RAG 인자를 미리 계산해 줌
+        if '_rag' in extracted:
+            rag_args = extracted['_rag']
+            sx = dict(
+                stage=rag_args.get('stage', ''),
+                need=rag_args.get('need', '').split('|')[0] if rag_args.get('need') else '',
+                industry=rag_args.get('industry_cat', '').split('|')[0] if rag_args.get('industry_cat') else '',
+                industry_cat=rag_args.get('industry_cat', ''),
+                age=rag_args.get('age', ''),
+            )
+            # _rag.user_gu 가 있으면 프로필에서 뽑은 user_gu 를 덮어씀
+            if rag_args.get('user_gu'):
+                user_gu = rag_args['user_gu']
+        else:
+            # 구버전 호환 (기존 schema-v0.4 extracted 형태)
+            sd=extracted.get('검색정보') or {}; ex=extracted.get('추가추출값') or {}
+            nd=sd.get('필요지원') or []
+            sx=dict(stage=ex.get('창업단계_언급') if ex.get('창업단계_언급') in ('예비','개업') else '',
+                    need=(nd[0] if isinstance(nd,list) and nd else (nd if isinstance(nd,str) else '')),
+                    industry=sd.get('업종원문표현') or '',
+                    industry_cat=profile['industryCategory']['value'] or '',
+                    age=str(ex.get('나이_언급') or ''))
     rag = search_ranked(request.text, user_gu=user_gu, **sx)
     rag_rank = {r['pblancId']: r for r in rag} if rag else {}
     ranked = sorted([(s, a) for s, a in active if a.announcement_id in rag_rank],

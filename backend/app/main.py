@@ -97,23 +97,41 @@ from app.local_demo import get_match_response
 def support_match(request: SupportMatchRequest, session: Session = Depends(get_session)):
     """Same frontend POST contract. AI extraction opt-in; no unverified eligibility claims."""
     import os
-    from user_extraction import extract_user_info
-    from user_extraction.demo_rules import demo_extract
-    mode = os.getenv('AI_MATCH_MODE','off').strip().lower()
+    import sys
+    # 나애님 추출 모듈 경로 추가
+    _extraction_dir = str(Path(__file__).resolve().parents[1] / 'user_extraction')
+    if _extraction_dir not in sys.path:
+        sys.path.insert(0, _extraction_dir)
+
+    mode = os.getenv('AI_MATCH_MODE', 'rules').strip().lower()
     extracted = None
-    if mode == 'demo':
-        extracted = demo_extract(request.text)
+
+    if mode == 'rules':
+        # 나애님 규칙만 (API 없이, 입력 중 미리보기와 동일)
+        from user_extract import extract_quick
+        from user_extraction.adapter import to_legacy
+        raw = extract_quick(request.text)
+        extracted = to_legacy(raw)
+
     elif mode == 'llm':
         if not os.getenv('OPENAI_API_KEY'):
             raise HTTPException(503, detail='AI_MATCH_MODE=llm 이지만 OPENAI_API_KEY가 없습니다')
-        if os.getenv('RENDER') and os.getenv('ENABLE_PUBLIC_LLM','false').lower() != 'true':
+        if os.getenv('RENDER') and os.getenv('ENABLE_PUBLIC_LLM', 'false').lower() != 'true':
             raise HTTPException(503, detail='공개 LLM 호출은 기본 비활성화입니다. 보안/사용량 제한 설정 후 활성화하세요.')
         try:
-            extracted = extract_user_info(request.text)
+            from user_extract import extract
+            from user_extraction.adapter import to_legacy
+            raw = extract(request.text)
+            extracted = to_legacy(raw)
         except Exception as exc:
             raise HTTPException(502, detail=f'사용자 정보 AI 추출 실패: {type(exc).__name__}') from exc
-    elif mode != 'off':
-        raise HTTPException(500, detail='AI_MATCH_MODE는 off / demo / llm만 가능합니다')
+
+    elif mode == 'off':
+        pass  # extracted = None -> 규칙 검색만
+
+    else:
+        raise HTTPException(500, detail='AI_MATCH_MODE는 off / rules / llm만 가능합니다')
+
     payload = get_match_response(request, session, extracted=extracted)
 
     from app.local_run_store import maybe_save_demo_run
@@ -126,22 +144,46 @@ from pydantic import BaseModel, Field
 
 class UserExtractRequest(BaseModel):
     text: str = Field(min_length=1, max_length=1000)
-    mode: Literal['demo','llm'] = 'llm'
+    mode: Literal['rules', 'llm'] = 'rules'
     user_id: str | None = None
 
-@app.post('/api/v1/user-extract', summary='사용자 자연어 추출 (Schema v0.4)')
+@app.post('/api/v1/user-extract', summary='사용자 자연어 추출 (나애님 v2)')
 def user_extract(payload: UserExtractRequest):
-    """Separate API for integration and testing. Does not persist user utterances."""
+    """
+    입력 중(rules) 또는 제출(llm) 추출.
+    반환: { mode, ask_fields, result (DB 컬럼명 flat dict) }
+    """
     import os
-    from user_extraction import extract_user_info
-    from user_extraction.demo_rules import demo_extract
-    if payload.mode == 'demo':
-        return {'mode':'demo','is_real_llm':False,'result':demo_extract(payload.text,user_id=payload.user_id)}
-    if os.getenv('RENDER') and os.getenv('ENABLE_PUBLIC_LLM','false').lower() != 'true':
+    import sys
+    _extraction_dir = str(Path(__file__).resolve().parents[1] / 'user_extraction')
+    if _extraction_dir not in sys.path:
+        sys.path.insert(0, _extraction_dir)
+
+    from user_extract import extract_quick, extract, ASK_TEXT
+
+    if payload.mode == 'rules':
+        row = extract_quick(payload.text)
+        return {
+            'mode': 'rules',
+            'is_real_llm': False,
+            'ask_fields': row.get('ask_fields'),
+            'ask_text': {k: ASK_TEXT[k] for k in (row.get('ask_fields') or [])},
+            'result': row,
+        }
+
+    # llm 모드
+    if os.getenv('RENDER') and os.getenv('ENABLE_PUBLIC_LLM', 'false').lower() != 'true':
         raise HTTPException(503, detail='공개 LLM 기능은 비활성화입니다. 개인 테스트 후 보안/비용 제한 정책을 설정하세요.')
     if not os.getenv('OPENAI_API_KEY'):
         raise HTTPException(503, detail='OPENAI_API_KEY가 필요합니다. .env 설정을 확인하세요.')
     try:
-        return {'mode':'llm','is_real_llm':True,'result':extract_user_info(payload.text,user_id=payload.user_id)}
+        row = extract(payload.text)
+        return {
+            'mode': 'llm',
+            'is_real_llm': True,
+            'ask_fields': row.get('ask_fields'),
+            'ask_text': {k: ASK_TEXT[k] for k in (row.get('ask_fields') or [])},
+            'result': row,
+        }
     except Exception as exc:
         raise HTTPException(502, detail=f'LLM 추출 실패: {type(exc).__name__}') from exc
