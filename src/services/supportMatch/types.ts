@@ -1,5 +1,23 @@
 /* 지원사업 매칭 공용 타입 (명세 3-2, 3-4, 5장). 클라이언트·서버 공용 */
 
+/** 제출 서류 항목 (예은님 스키마 v4 기준) */
+export type SubmissionDoc = {
+  text: string
+  /** true = 필수, false = 선택. 없으면 미분류 */
+  required?: boolean
+  /** 대상자 조건 (예: "예비창업자만", "자부담 면제받으려면") */
+  target?: string
+}
+
+/** 안내정보 트랙 (공고에서 트랙별 금액·금리·서류가 다를 때) */
+export type InfoTrack = {
+  name: string
+  amountMaxManwon?: number
+  interestRate?: string
+  supportDetail?: string
+  submissionDocs?: SubmissionDoc[]
+}
+
 export type SupportType = '융자' | '보조금' | '보증' | '교육' | '멘토링' | '공간' | '사업화' | '기타'
 
 /** 결과 화면 카테고리 필터. 순서·표기 그대로 버튼에 쓴다 (공고의 support_types 값) */
@@ -69,8 +87,8 @@ export type SupportProgram = {
   contact?: string
   /** 신청 사이트 URL (기업마당 외 별도 신청 페이지가 있을 때) */
   applyUrl?: string                       // TODO: API 필드
-  /** 제출 서류 목록 */
-  submissionDocs?: string[]               // TODO: API 필드
+  /** 제출 서류 목록. 문자열 또는 필수/선택·대상자 구분 객체 */
+  submissionDocs?: SubmissionDoc[]
   /** 우대·가산점 항목 */
   bonusPoints?: string[]                  // TODO: API 필드
   /** 첨부 파일 (공고 원문 PDF/HWP 등) */
@@ -80,7 +98,7 @@ export type SupportProgram = {
   /** 자부담 (공고 원문 추출) */
   selfFunding?: { status: '있음' | '언급없음'; rate?: number; detail?: string }
   /** 안내정보 트랙 (자금·분야마다 금액·금리·서류가 다를 때) */
-  infoTracks?: { name: string; amountMaxManwon?: number; interestRate?: string; submissionDocs?: string[] }[]
+  infoTracks?: InfoTrack[]
   /** 포털 원문 항목 그대로 (quote 검증 대상) */
   fields: Record<string, string>
   fetchedAt: string

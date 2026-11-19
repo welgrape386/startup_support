@@ -7,7 +7,7 @@ import { Icon } from '@/components/Icon'
 import { cx } from '@/lib/cx'
 import { Container } from '@/layout/Container'
 import { PageHeader } from '@/layout/PageHeader'
-import type { MatchResult, MatchVerdict } from '@/services/supportMatch/types'
+import type { MatchResult, MatchVerdict, SubmissionDoc, InfoTrack } from '@/services/supportMatch/types'
 import { SignalLight, type Verdict } from '../../SignalComponents2'
 
 const verdictSignal: Record<MatchVerdict, Verdict> = {
@@ -59,6 +59,109 @@ const fileExt = (url: string) => url.split('.').pop()?.toLowerCase() ?? ''
 const isPdf = (url: string) => fileExt(url) === 'pdf'
 const isImage = (url: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt(url))
 const isDoc = (url: string) => ['hwp', 'hwpx', 'docx', 'doc'].includes(fileExt(url))
+
+/** 제출 서류 체크리스트 아이템 */
+function DocItem({ doc, checked, onToggle }: { doc: SubmissionDoc; checked: boolean; onToggle: () => void }) {
+  const id = `doc-${doc.text}`
+  return (
+    <li className="flex items-start gap-2">
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={onToggle}
+        className="mt-0.5 h-4 w-4 shrink-0 accent-primary-600"
+      />
+      <label htmlFor={id} className="cursor-pointer flex flex-col gap-0.5" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
+        <span className="text-sm text-ink">{doc.text}</span>
+        {(doc.required !== undefined || doc.target) && (
+          <span className="flex flex-wrap gap-1">
+            {doc.required === true && (
+              <span className="inline-flex items-center rounded-sm bg-warn-soft px-1.5 py-0 text-[11px] font-semibold text-warn">필수</span>
+            )}
+            {doc.required === false && (
+              <span className="inline-flex items-center rounded-sm bg-bg-soft px-1.5 py-0 text-[11px] font-semibold text-muted">선택</span>
+            )}
+            {doc.target && (
+              <span className="text-[11px] text-muted">{doc.target}</span>
+            )}
+          </span>
+        )}
+      </label>
+    </li>
+  )
+}
+
+/** 트랙이 있는 공고 — 공통 서류 + 트랙별 탭 UI */
+function TrackTabs({
+  tracks,
+  topDocs,
+  checked,
+  onToggle,
+  won,
+}: {
+  tracks: InfoTrack[]
+  topDocs: SubmissionDoc[]
+  checked: Record<string, boolean>
+  onToggle: (key: string) => void
+  won: (m: number) => string
+}) {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const active = tracks[activeIdx]
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* 탭 버튼 */}
+      <div className="flex flex-wrap gap-1 border-b border-line pb-2">
+        {tracks.map((t, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => setActiveIdx(i)}
+            className={cx(
+              'rounded-btn px-3 py-1 text-sm font-semibold transition-colors',
+              i === activeIdx
+                ? 'bg-primary-600 text-white'
+                : 'bg-bg-soft text-muted hover:bg-bg-muted',
+            )}
+          >
+            {t.name}
+          </button>
+        ))}
+      </div>
+
+      {/* 선택된 트랙 내용 */}
+      <div className="flex flex-col gap-3">
+        {active.amountMaxManwon != null && (
+          <p className="text-[22px] font-extrabold tracking-tight text-primary-600">
+            최대 {won(active.amountMaxManwon)}
+          </p>
+        )}
+        {active.interestRate && (
+          <p className="text-sm text-muted">금리: <span className="font-semibold text-ink">{active.interestRate}</span></p>
+        )}
+        {active.supportDetail && (
+          <p className="text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>{active.supportDetail}</p>
+        )}
+
+        {/* 공통 서류 + 트랙별 서류 합쳐서 표시 */}
+        {((topDocs.length > 0) || (active.submissionDocs ?? []).length > 0) && (
+          <div className="mt-1">
+            <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted">제출 서류</p>
+            <ul className="flex flex-col gap-2">
+              {topDocs.map((doc) => (
+                <DocItem key={`top-${doc.text}`} doc={doc} checked={!!checked[`top-${doc.text}`]} onToggle={() => onToggle(`top-${doc.text}`)} />
+              ))}
+              {(active.submissionDocs ?? []).map((doc) => (
+                <DocItem key={`track-${activeIdx}-${doc.text}`} doc={doc} checked={!!checked[`track-${activeIdx}-${doc.text}`]} onToggle={() => onToggle(`track-${activeIdx}-${doc.text}`)} />
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
 
 /** 예은님 조건 JSON의 주요 조건 필드 → 화면에 보여줄 조건 목록으로 변환 */
 function conditionsFromJson(json: Record<string, unknown> | null): { label: string }[] {
@@ -170,8 +273,9 @@ export function SupportMatchDetail() {
   const p = result.program
   const signal = verdictSignal[result.verdict]
 
-  // TODO: 아래 필드들은 API 연동 시 실제 데이터로 대체
   const submissionDocs = p.submissionDocs ?? []
+  const infoTracks = p.infoTracks ?? []
+  const hasInfoTracks = infoTracks.length > 0
   const bonusPoints = p.bonusPoints ?? []
   const attachmentFiles = p.attachmentFiles ?? []
   const applyUrl = p.applyUrl
@@ -371,32 +475,33 @@ export function SupportMatchDetail() {
             <SectionTitle>신청 준비</SectionTitle>
 
             {/* 4.2.1 제출 서류 */}
-            <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-muted">제출 서류</h3>
-            {submissionDocs.length === 0 ? (
-              <p className="text-sm text-muted">
-                정보 없음 {/* TODO: API 필드 submissionDocs */}
-              </p>
+            {hasInfoTracks ? (
+              /* 트랙이 있는 공고: 공통 서류 + 트랙별 탭 */
+              <TrackTabs
+                tracks={infoTracks!}
+                topDocs={submissionDocs}
+                checked={checked}
+                onToggle={toggleDoc}
+                won={won}
+              />
             ) : (
-              <ul className="flex flex-col gap-2">
-                {submissionDocs.map((doc) => (
-                  <li key={doc} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`doc-${doc}`}
-                      checked={!!checked[doc]}
-                      onChange={() => toggleDoc(doc)}
-                      className="h-4 w-4 accent-primary-600"
-                    />
-                    <label
-                      htmlFor={`doc-${doc}`}
-                      className="cursor-pointer text-sm text-ink"
-                      style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}
-                    >
-                      {doc}
-                    </label>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-muted">제출 서류</h3>
+                {submissionDocs.length === 0 ? (
+                  <p className="text-sm text-muted">정보 없음</p>
+                ) : (
+                  <ul className="flex flex-col gap-2">
+                    {submissionDocs.map((doc) => (
+                      <DocItem
+                        key={doc.text}
+                        doc={doc}
+                        checked={!!checked[doc.text]}
+                        onToggle={() => toggleDoc(doc.text)}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </>
             )}
 
             {/* 4.2.2 우대·가산점 */}
