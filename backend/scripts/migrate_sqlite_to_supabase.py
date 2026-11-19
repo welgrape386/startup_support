@@ -59,7 +59,11 @@ if pg_url_sa.startswith('postgresql://'):
 elif pg_url_sa.startswith('postgres://'):
     pg_url_sa = pg_url_sa.replace('postgres://', 'postgresql+psycopg://', 1)
 
-pg_engine = create_engine(pg_url_sa, pool_pre_ping=True)
+pg_engine = create_engine(
+    pg_url_sa,
+    pool_pre_ping=True,
+    connect_args={"prepare_threshold": None},  # Transaction pooler: prepared statement 비활성화
+)
 
 # --- 테이블 스키마 생성 (SQLAlchemy 모델 사용) ---
 print('1) PostgreSQL에 테이블 생성 중...')
