@@ -109,10 +109,14 @@ def support_match(request: SupportMatchRequest, session: Session = Depends(get_s
 
     if mode == 'rules':
         # 나애님 규칙만 (API 없이, 입력 중 미리보기와 동일)
-        from user_extract import extract_quick
-        from user_extraction.adapter import to_legacy
-        _extract_raw = extract_quick(request.text)
-        extracted = to_legacy(_extract_raw)
+        try:
+            from user_extract import extract_quick
+            from adapter import to_legacy  # sys.path에 user_extraction/ 추가돼 있어서 직접 임포트
+            _extract_raw = extract_quick(request.text)
+            extracted = to_legacy(_extract_raw)
+        except Exception as exc:
+            import traceback
+            raise HTTPException(500, detail=f'규칙 추출 실패: {type(exc).__name__}: {exc}\n{traceback.format_exc()}') from exc
 
     elif mode == 'llm':
         if not os.getenv('OPENAI_API_KEY'):
@@ -121,7 +125,7 @@ def support_match(request: SupportMatchRequest, session: Session = Depends(get_s
             raise HTTPException(503, detail='공개 LLM 호출은 기본 비활성화입니다. 보안/사용량 제한 설정 후 활성화하세요.')
         try:
             from user_extract import extract
-            from user_extraction.adapter import to_legacy
+            from adapter import to_legacy  # sys.path에 user_extraction/ 추가돼 있어서 직접 임포트
             _extract_raw = extract(request.text)
             extracted = to_legacy(_extract_raw)
         except Exception as exc:
