@@ -121,7 +121,8 @@ def upsert_rows(table: str, cols: list, rows: list):
     pk_cols = [row[1] for row in pk_info if row[5] > 0]
 
     # psycopg 직접 연결로 upsert (% 바인딩 사용 — psycopg 네이티브)
-    with psycopg.connect(pg_dsn) as conn:
+    # prepare=False: Transaction pooler는 prepared statement 미지원
+    with psycopg.connect(pg_dsn, prepare_threshold=None) as conn:
         with conn.cursor() as cur:
             col_str = ', '.join(f'"{c}"' for c in cols)
             placeholders = ', '.join(['%s'] * len(cols))
