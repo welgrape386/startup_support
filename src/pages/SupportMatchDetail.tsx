@@ -354,8 +354,8 @@ export function SupportMatchDetail() {
                           {item.label}
                         </span>
                         {item.quote && (
-                          <div className="mt-1 rounded-md bg-info-soft px-3 py-2.5">
-                            <p className="mb-1 text-[11px] font-semibold text-primary-600">원문 근거</p>
+                          <div className="mt-3 rounded-md bg-info-soft px-3 py-2.5">
+                            <p className="mb-1 text-[13px] font-semibold text-primary-600">원문 근거</p>
                             <p className="text-[13px] text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.7' }}>
                               {item.quote}
                             </p>
