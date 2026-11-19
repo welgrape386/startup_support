@@ -14,10 +14,6 @@ from collections import Counter
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# 개발 공고 15건 (나머지 15건은 평가)
-DEV_IDS = {f'PBLN_000000000{n}' for n in (
-    118108, 119567, 119739, 121175, 127031, 121480, 123795, 123842,
-    123844, 124045, 125511, 126686, 126872, 126969, 127098)}
 
 # 1M 토큰당 USD: (입력, 캐시 입력, 출력)
 PRICES = {
@@ -130,7 +126,6 @@ def main():
     ap.add_argument('--out', required=True)
     ap.add_argument('--model', default='gpt-6.1-terra')     # 시범 15쌍으로 모델 확정
     ap.add_argument('--pairs', help='사용자,공고ID csv. 이 쌍만 판정')
-    ap.add_argument('--split', choices=['dev', 'eval'], help='개발/평가 공고만 판정')
     a = ap.parse_args()
 
     load_dotenv()
@@ -139,8 +134,6 @@ def main():
     users = {u['사용자ID']: u for u in read_csv(a.users)}
 
     rows = read_csv(a.gold)
-    if a.split:
-        rows = [g for g in rows if (g['공고ID'] in DEV_IDS) == (a.split == 'dev')]
     if a.pairs:
         want = {(p['사용자'], p['공고ID']) for p in read_csv(a.pairs)}
         rows = [g for g in rows if (g['사용자'], g['공고ID']) in want]
@@ -194,18 +187,14 @@ def main():
     print(f'\n토큰: 입력 {tokens["입력"]:,} (캐시 {tokens["캐시"]:,}), 출력 {tokens["출력"]:,}')
     print(f'비용 ${cost:.3f}, 시간 {elapsed:.0f}초 (1쌍 {elapsed / len(rows):.1f}초)')
 
-    # 채점: 전체, 그리고 개발/평가가 섞여 있으면 따로
+    # 채점
     gold = {(g['사용자'], g['공고ID']): emoji(g['정답']) for g in rows}
     result = {'모델': a.model, '프롬프트': os.path.basename(a.prompt), '비용(USD)': round(cost, 4), '토큰': dict(tokens)}
-    groups = {'전체': out, '개발': [r for r in out if r['공고ID'] in DEV_IDS], '평가': [r for r in out if r['공고ID'] not in DEV_IDS]}
-    for name, sub in groups.items():
-        if not sub or (name != '전체' and len(sub) == len(out)):
-            continue
-        m = metrics([(gold[(r['사용자'], r['공고ID'])], emoji(r.get('예측'))) for r in sub])
-        result[name] = m
-        print(f'\n[{name} {m["쌍 수"]}쌍] Accuracy {m["Accuracy"]}, False green {m["False green"]}'
-              f' (🟢 예측 {m["🟢 예측 수"]}건), Macro-F1 {m["Macro-F1"]}')
-        print('  혼동행렬(정답→예측):', m['혼동행렬(정답→예측)'])
+    m = metrics([(gold[(r['사용자'], r['공고ID'])], emoji(r.get('예측'))) for r in out])
+    result['전체'] = m
+    print(f'\n[전체 {m["쌍 수"]}쌍] Accuracy {m["Accuracy"]}, False green {m["False green"]}'
+          f' (🟢 예측 {m["🟢 예측 수"]}건), Macro-F1 {m["Macro-F1"]}')
+    print('  혼동행렬(정답→예측):', m['혼동행렬(정답→예측)'])
     with open(base + '.metrics.json', 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
 
