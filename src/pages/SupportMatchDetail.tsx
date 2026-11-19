@@ -81,7 +81,8 @@ function conditionsFromJson(json: Record<string, unknown> | null): { label: stri
       summary = [min, max].filter(Boolean).join(', ')
     } else if (key === '지역') {
       const ranges = (f['범위'] as { 시도?: string; 시군구?: string }[] | undefined) ?? []
-      summary = ranges.map((r) => [r['시도'], r['시군구']].filter(Boolean).join(' ')).join(', ')
+      const regionStr = ranges.map((r) => [r['시도'], r['시군구']].filter(Boolean).join(' ')).filter(Boolean).join(', ')
+      summary = regionStr || (quote ? quote.split('\n')[0].slice(0, 30) : '지역 조건 있음')
     } else if (key === '사업자등록') {
       summary = String(f['값'] ?? '')
     } else if (key === '업력') {
@@ -98,7 +99,19 @@ function conditionsFromJson(json: Record<string, unknown> | null): { label: stri
     } else if (key === '성별') {
       summary = String(f['값'] ?? '')
     } else if (key === '기업규모') {
-      summary = String(f['구분'] ?? '')
+      const 구분 = f['구분']
+      summary = Array.isArray(구분) ? (구분 as string[]).join(', ') : String(구분 ?? '')
+    } else if (key === '특수자격') {
+      // [{유형, 값, 이름, 내용, ...}] 형태
+      const items = f as unknown as Record<string, unknown>[]
+      if (Array.isArray(items) && items.length > 0) {
+        summary = items
+          .map((it) => String(it['값'] ?? it['이름'] ?? it['유형'] ?? it['내용'] ?? ''))
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(', ')
+        if (!summary) summary = '특수 자격 조건 있음'
+      }
     } else {
       summary = `${label} 조건 있음`
     }
