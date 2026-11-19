@@ -61,18 +61,17 @@ const isImage = (url: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(
 const isDoc = (url: string) => ['hwp', 'hwpx', 'docx', 'doc'].includes(fileExt(url))
 
 /** 예은님 조건 JSON의 주요 조건 필드 → 화면에 보여줄 조건 목록으로 변환 */
-function conditionsFromJson(json: Record<string, unknown> | null): { label: string; quote: string }[] {
+function conditionsFromJson(json: Record<string, unknown> | null): { label: string }[] {
   if (!json) return []
   const FIELD_LABEL: Record<string, string> = {
     나이: '나이', 지역: '지역', 사업자등록: '사업자등록', 업력: '업력',
     업종: '업종', 신청자_유형: '신청자 유형', 성별: '성별',
     특수자격: '특수 자격', 기업규모: '기업 규모',
   }
-  const result: { label: string; quote: string }[] = []
+  const result: { label: string }[] = []
   for (const [key, label] of Object.entries(FIELD_LABEL)) {
     const f = json[key] as Record<string, unknown> | undefined
     if (!f || f['상태'] === '없음' || f['상태'] === null) continue
-    const quote = (f['근거'] as string | null) ?? ''
     // 조건 요약 문구 만들기
     let summary = ''
     if (key === '나이' && (f['min'] != null || f['max'] != null)) {
@@ -82,7 +81,7 @@ function conditionsFromJson(json: Record<string, unknown> | null): { label: stri
     } else if (key === '지역') {
       const ranges = (f['범위'] as { 시도?: string; 시군구?: string }[] | undefined) ?? []
       const regionStr = ranges.map((r) => [r['시도'], r['시군구']].filter(Boolean).join(' ')).filter(Boolean).join(', ')
-      summary = regionStr || (quote ? quote.split('\n')[0].slice(0, 30) : '지역 조건 있음')
+      summary = regionStr || '지역 조건 있음'
     } else if (key === '사업자등록') {
       summary = String(f['값'] ?? '')
     } else if (key === '업력') {
@@ -115,7 +114,7 @@ function conditionsFromJson(json: Record<string, unknown> | null): { label: stri
     } else {
       summary = `${label} 조건 있음`
     }
-    if (summary) result.push({ label: `${label}: ${summary}`, quote })
+    if (summary) result.push({ label: `${label}: ${summary}` })
   }
   return result
 }
@@ -349,18 +348,10 @@ export function SupportMatchDetail() {
                 return items.length > 0 ? (
                   <ul className="flex flex-col gap-4">
                     {items.map((item, i) => (
-                      <li key={i} className="flex flex-col gap-1">
+                      <li key={i}>
                         <span className="text-sm font-semibold text-ink" style={{ wordBreak: 'keep-all' }}>
                           {item.label}
                         </span>
-                        {item.quote && (
-                          <div className="mt-3 rounded-md bg-info-soft px-3 py-2.5">
-                            <p className="mb-1 text-[13px] font-semibold text-primary-600">원문 근거</p>
-                            <p className="text-[13px] text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.7' }}>
-                              {item.quote}
-                            </p>
-                          </div>
-                        )}
                       </li>
                     ))}
                   </ul>
