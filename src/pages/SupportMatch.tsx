@@ -249,39 +249,46 @@ export function SupportMatch() {
             className="w-full rounded-input border border-line bg-surface px-4 py-3 text-sm leading-relaxed text-ink-soft outline-none focus:border-primary-400"
           />
           <div className="mt-1 flex items-start justify-between gap-3">
-            <p className="text-[13px] text-muted" aria-live="polite">
+            <div className="flex flex-col gap-0.5 text-[13px] text-muted" aria-live="polite">
               {text.trim() && (
                 <>
-                  인식된 정보{' '}
-                  {read.map((r, i) => (
-                    <span key={r.label}>
-                      {i > 0 && ', '}
-                      {r.value ? (
-                        <span className="font-semibold text-ink-soft">
-                          {r.label} {r.value}
-                        </span>
-                      ) : (
-                        <span>{r.label} 없음</span>
-                      )}
-                    </span>
-                  ))}
-                  {tooShort && <span className="text-warn"> · 나이, 지역, 업종을 함께 적어주세요</span>}
-                  {!tooShort && missing.length > 0 && (
-                    <span className="text-warn"> · 추가하면 더 정확해요: {missing.join(', ')}</span>
+                  {/* 1줄: 인식된 정보 */}
+                  <p>
+                    인식된 정보{' '}
+                    {read.map((r, i) => (
+                      <span key={r.label}>
+                        {i > 0 && ', '}
+                        {r.value ? (
+                          <span className="font-semibold text-ink-soft">
+                            {r.label} {r.value}
+                          </span>
+                        ) : (
+                          <span>{r.label} 없음</span>
+                        )}
+                      </span>
+                    ))}
+                  </p>
+                  {/* 2줄: 추가하면 더 정확해요 (tooShort 포함) */}
+                  {tooShort && (
+                    <p className="text-warn">나이, 지역, 업종을 함께 적어주세요</p>
                   )}
+                  {!tooShort && missing.length > 0 && (
+                    <p className="text-warn">추가하면 더 정확해요: {missing.join(', ')}</p>
+                  )}
+                  {/* 3줄+: 겹치는 동 안내, 서울 밖 안내 */}
                   {ambiguousList.map(({ raw, candidates }) => (
-                    <span key={raw} className="text-warn">
-                      {' '}· {raw}은(는) {candidates.join(' · ')}에 있어요 — 구 이름으로 적어주세요
-                    </span>
+                    <p key={raw} className="text-warn">
+                      · {raw}은(는) {candidates.join(' · ')}에 있어요 — 구 이름으로 적어주세요
+                    </p>
                   ))}
                   {isOutsideSeoul && (
-                    <span className="text-warn">
-                      {' '}· 이 서비스는 서울에서 창업하는 분 대상이에요. 서울 외 지역은 일부 공고가 맞지 않을 수 있어요.
-                    </span>
+                    <p className="text-warn">
+                      · 이 서비스는 서울에서 창업하는 분 대상이에요. 서울 외 지역은 일부 공고가 맞지 않을 수 있어요.
+                    </p>
                   )}
                 </>
               )}
-            </p>
+            </div>
             <p className="shrink-0 text-[13px] text-muted tnum">
               {text.length}/{MAX_TEXT_LENGTH}
             </p>
