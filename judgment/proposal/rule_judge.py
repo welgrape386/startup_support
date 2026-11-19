@@ -14,7 +14,8 @@ from collections import Counter
 from datetime import date, timedelta
 
 REF_DATE = date(2026, 10, 16)  # 판정 기준일 (고정)
-IND_MAP = None 
+IND_MAP = None
+
 
 LABELS = {'🟢': '🟢 신청 가능', '🟡': '🟡 조건부가능', '⚪': '⚪️ 확인 필요', '🔴': '🔴 신청 불가'}
 
@@ -29,6 +30,7 @@ HOME_TYPES = ('거주지', '주민등록지')
 AGE_TARGETS = (None, '대표자', '신청자_본인', '구성원_전원', '공동대표_전원', '명시없음')
 CHECKLIST_KEYS = ('기업규모', '보유요건', '제외대상', '창업이력', '기타조건')
 LIST_KEYS = ('특수자격', '대안조건') + CHECKLIST_KEYS
+JUDGED_KEYS = {'나이', '성별', '지역', '업력', '사업자등록', '신청자_유형', '업종', '특수자격'}
 ORDER = ('사업자등록', '업력', '신청자_유형', '지역', '나이', '성별', '업종', '특수자격', '대안조건')
 
 # 업종 원문 판단표
@@ -289,8 +291,7 @@ def judge_years(cond, u, pid, dates):
         return UNK, '업력 기준 확인 필요'
     lo, lo_k, hi, hi_k = cond.get('min_개월'), cond.get('경계_min'), cond.get('max_개월'), cond.get('경계_max')
     if lo is None and hi is None and cond.get('단계'):
-        lo, lo_k, hi, hi_k = {'초기': (None, None, 36, '이하'), '도약': (36, '이상', 84, '이하')}.get(
-            cond['단계'], (None, None, None, None))
+        lo, lo_k, hi, hi_k = {'초기': (None, None, 36, '이하'), '도약': (36, '이상', 84, '이하')}.get(cond['단계'], (None, None, None, None))
     on = base_date(pid, cond.get('기준일'), dates)
     earliest, latest = open_range(m)
     rs = []
@@ -308,8 +309,7 @@ def judge_years(cond, u, pid, dates):
             return True
         rs.append(merge_both_ends(*[OK if ok(d) else NO for d in (earliest, latest)]))
     if cond.get('창업일_범위'):
-        rs.append(merge_both_ends(*[OK if in_date_range(d, cond['창업일_범위']) else NO
-                                    for d in (earliest, latest)]))
+        rs.append(merge_both_ends(*[OK if in_date_range(d, cond['창업일_범위']) else NO for d in (earliest, latest)]))
     if not rs:
         return UNK, '업력 기준 확인 필요'
     r = NO if NO in rs else (UNK if UNK in rs else OK)
@@ -369,6 +369,8 @@ def judge_applicant(cond, c, u):
         return (OK, None, {}) if have == need else (NO, f'{need}만 신청 가능 (사용자 {have})', {})
     if '예비창업자' in vals:
         return NO, '예비창업자만 신청 가능', {}
+    if '대학생' in vals:
+        return judge_special([{'값': '대학생'}], u)
     return UNK, '신청 대상 확인 필요', {}
 
 
@@ -403,15 +405,21 @@ def gu_label(scopes):
     return '·'.join(s.get('시군구') or s.get('시도') or '' for s in scopes)
 
 
+SERVICE_SIDO = '서울특별시'  # 서비스 대상: 서울에서 창업하는 사람
+
+
 def judge_region(cond, u):
+    """지역. 판정규칙 지역 판정 표 + 판정 단계 정리(나애님) 사용자 프로필 형식
+    - 공고가 서울 밖 시·도(타지역)면 누구든 ❌
+    - 거주지: 서울 밖에 살면 ❌, 서울 안 다른 구면 🟡
+    - 창업예정지·사업장소재지: 시도가 서울 밖이면 화면 안내 대상이라 판정하지 않음"""
     if not cond or cond.get('상태') in (None, '없음', '대안조건'):
         return None
     if cond['상태'] == '불명확' or not cond.get('범위'):
         return UNK, '지역 조건 확인 필요', {}
     scopes = cond['범위']
-    home_sido = (u.get('거주지') or {}).get('시도') or '서울특별시'
     label = gu_label(scopes)
-    if not any(s.get('시도') == home_sido for s in scopes):
+    if not any(s.get('시도') == SERVICE_SIDO for s in scopes):
         return NO, f'타지역 공고 ({label})', {'공고': label}
     stage = user_stage(u)
     place_field = '사업장소재지' if stage == '초기' else '창업예정지'
@@ -425,23 +433,34 @@ def judge_region(cond, u):
             fields = ['거주지', place_field]
         res = []
         for f in fields:
-            m = loc_in(u.get(f), scopes)
+            loc = u.get(f)
+            if f != '거주지' and loc and loc.get('시도') and loc['시도'] != SERVICE_SIDO:
+                continue  # 서울 밖 창업예정지·사업장: 판정 안 함 (화면 안내)
+            m = loc_in(loc, scopes)
             if m is True:
                 res.append((OK, None))
             elif m is None:
                 res.append((UNK, f'{f} 확인 필요'))
             elif f == '거주지':
-                why = f'{label} 거주 조건 확인 필요' if stage == '초기' else f'{label} 거주자만 신청 가능'
-                res.append((COND, why))
+                if loc.get('시도') != SERVICE_SIDO:
+                    res.append((NO, f'거주지 {loc.get("시도")} ≠ 공고 {label}'))
+                elif stage == '초기':
+                    res.append((COND, f'{label} 거주 조건 확인 필요'))
+                else:
+                    res.append((COND, f'{label} 거주자만 신청 가능'))
             elif stage == '초기':
-                gu = (u.get(f) or {}).get('시군구')
+                gu = (loc or {}).get('시군구')
                 res.append((NO, f'사업장 {gu} ≠ 공고 {label}'))
             else:
                 res.append((COND, f'{label}에서 창업하면 신청 가능'))
+        if not res:
+            return None
         return min(res, key=lambda x: GOOD[x[0]])
 
     types = cond.get('유형') or ['명시없음']
-    per = [by_type(t) for t in types]
+    per = [x for x in (by_type(t) for t in types) if x is not None]
+    if not per:
+        return None
     if len(per) > 1 and cond.get('유형_결합') == '모두':
         r = min(per, key=lambda x: GOOD[x[0]])
     else:
@@ -583,12 +602,9 @@ def keyword_hit(kw, kcats, cats, text):
     return None
 
 
-def judge_industry(sc, u, mode):
+def judge_industry(sc, u):
     """업종. 반환 (결과, 사유, 상세{industry_reason, industry_hit})"""
-    if mode == 'category':
-        no_cond = sc['허용'] == '전체' and not sc['제외'] and not sc['제외_예외']
-    else:
-        no_cond = sc['허용'] == '전체' and not sc['제외_상세']
+    no_cond = sc['허용'] == '전체' and not sc['제외_상세']
     if no_cond and sc['상태'] != '불명확':
         return None
     stage = user_stage(u)
@@ -614,22 +630,7 @@ def judge_industry(sc, u, mode):
     if not cats:
         return unknown('업종 확인 필요')
 
-    if mode == 'category':  # 카테고리만 비교
-        if '기타' in cats:
-            return unknown('업종 확인 필요')
-        hit = [c for c in cats if c in sc['제외']]
-        if hit:
-            return fail('제외', hit_cat=hit[0])
-        hit = [c for c in cats if c in sc['제외_예외']]
-        if hit:
-            return WHITE, f'{hit[0]} 업종 제외 예외 확인 필요', {'industry_reason': '확인필요'}
-        if allow == '전체' or any(c in allow for c in cats):
-            return OK, None, {}
-        if sc['허용_미매칭']:
-            return unknown('업종 조건 확인 필요')
-        return fail('허용')
-
-    # text: 판정규칙. 키워드마다 제외를 보고, '기타'·부분 제외·예외는 업종 원문으로 확인
+    # 키워드마다 제외를 보고, '기타'·부분 제외·예외는 업종 원문으로 확인
     excluded, unsure = None, None
     for kw, kcats, exc in sc['제외_상세']:
         h = keyword_hit(kw, kcats, cats, text)
@@ -641,7 +642,7 @@ def judge_industry(sc, u, mode):
         if exc is None:
             excluded = excluded or kw
             continue
-        dec = exception_decision(kw, text)
+        dec = exception_decision(kw, text)  # 예외("단, ~은 가능")에 들어가는지
         if dec == 'out':
             excluded = excluded or kw
         elif dec is None:
@@ -691,7 +692,7 @@ def option_text(opt):
     return ' + '.join(p for p in parts if p)
 
 
-def judge_option(opt, c, u, pid, dates, ind_mode, dic):
+def judge_option(opt, c, u, pid, dates, dic):
     """선택지 하나 = 칸들의 AND. 판정 안 하는 칸(보유요건·기타조건 등)은 ❔"""
     rs = []
     for k, v in opt.items():
@@ -718,7 +719,7 @@ def judge_option(opt, c, u, pid, dates, ind_mode, dic):
             x = judge_applicant(v, c, u)
             r = (OK, None) if x is None else x[:2]
         elif k == '업종':
-            x = judge_industry(industry_scope(v, None, dic), u, ind_mode)
+            x = judge_industry(industry_scope(v, None, dic), u)
             r = (OK, None) if x is None else x[:2]
         elif k == '기업규모':
             r = (OK, None)
@@ -730,14 +731,16 @@ def judge_option(opt, c, u, pid, dates, ind_mode, dic):
     return min(rs, key=lambda x: GOOD[x[0]])
 
 
-def judge_alternatives(alts, c, u, pid, dates, ind_mode, dic):
+def judge_alternatives(alts, c, u, pid, dates, dic):
     """대안조건마다 선택지 중 가장 좋은 결과. alt_left = ❌ 아닌 선택지 번호(JSON 순서, 0부터)"""
     out = []
     for a in alts:
         opts = [o for o in a.get('선택지') or [] if o]
         if not opts:
             continue
-        res = [judge_option(o, c, u, pid, dates, ind_mode, dic) for o in opts]
+        if not any(set(o) & JUDGED_KEYS for o in opts):
+            continue  # 판정하는 칸이 하나도 없는 대안조건은 판정 안 함(통과)
+        res = [judge_option(o, c, u, pid, dates, dic) for o in opts]
         best_i = max(range(len(opts)), key=lambda i: GOOD[res[i][0]])
         best = res[best_i][0]
         left = [i for i, r in enumerate(res) if r[0] != NO]
@@ -803,7 +806,7 @@ def signal_of(results):
     return '🟢'
 
 
-def judge_scope(top, track, u, pid, dates, ev, dic, ind_mode):
+def judge_scope(top, track, u, pid, dates, ev, dic):
     c = verify(scoped(top, track), pid, ev, track['이름'] if track else '전체')
     res = {}
 
@@ -823,20 +826,20 @@ def judge_scope(top, track, u, pid, dates, ev, dic, ind_mode):
     sc = industry_scope(top.get('업종'), (track or {}).get('조건', {}).get('업종'), dic)
     if IND_MAP is not None:
         sc = apply_map(sc, IND_MAP.get((pid, track['이름'] if track else '')))
-    put('업종', judge_industry(sc, u, ind_mode))
+    put('업종', judge_industry(sc, u))
     put('특수자격', judge_special(c.get('특수자격'), u))
-    for i, x in enumerate(judge_alternatives(c.get('대안조건') or [], c, u, pid, dates, ind_mode, dic)):
+    for i, x in enumerate(judge_alternatives(c.get('대안조건') or [], c, u, pid, dates, dic)):
         res['대안조건' if i == 0 else f'대안조건{i + 1}'] = x
     if not res:  # 판정 조건을 하나도 못 뽑음
         return '⚪', {'자격조건': (UNK, '자격 조건 미기재', {})}, c
     return signal_of(res), res, c
 
 
-def judge_pair(cond, u, pid, dates, ev, dic, ind_mode):
+def judge_pair(cond, u, pid, dates, ev, dic):
     tracks = cond.get('트랙') or []
     cands = []
     for t in (tracks or [None]):
-        sig, res, c = judge_scope(cond, t, u, pid, dates, ev, dic, ind_mode)
+        sig, res, c = judge_scope(cond, t, u, pid, dates, ev, dic)
         cands.append((sig, res, c, t['이름'] if t else ''))
     best = max(cands, key=lambda x: SIGNAL_GOOD[x[0]])  # 같으면 앞 트랙
     sig, res, c, name = best
@@ -851,6 +854,9 @@ def checklist(c):
             items += [f"{k}: {i.get('내용') or i.get('종류') or i.get('유형') or ''}" for i in v if isinstance(i, dict)]
         elif isinstance(v, dict) and v.get('상태') in ('있음', '불명확'):
             items.append(f'{k}: {v.get("근거") or v.get("구분") or ""}')
+    for a in c.get('대안조건') or []:  # 판정하는 칸이 없는 대안조건
+        if not any(set(o) & JUDGED_KEYS for o in a.get('선택지') or []):
+            items.append(f"대안조건: {a.get('설명') or ''}")
     return items
 
 
@@ -904,7 +910,6 @@ def main():
     ap.add_argument('--industry-dict', default=os.path.join(here, '업종_사전.csv'))
     ap.add_argument('--dates', default=os.path.join(here, 'ann_dates.csv'))
     ap.add_argument('--texts', default=os.path.join(root, 'texts_gold30'), help='근거 검증용 원문 폴더. 없으면 검증 안 함')
-    ap.add_argument('--industry-mode', choices=['text', 'category'], default='text')
     ap.add_argument('--industry-map', default=None, help='주면 업종 카테고리를 나애님 industry_map.csv 줄로 판정 (기본: 업종_사전으로 JSON에서 만듦)')
     a = ap.parse_args()
     global IND_MAP
@@ -923,7 +928,7 @@ def main():
         if pid not in conds:
             sig, res, c, track, cands = '⚪', {'자격조건': (UNK, '조건 JSON 없음', {})}, {}, '', []
         else:
-            sig, res, c, track, cands = judge_pair(conds[pid], users[uid], pid, dates, ev, dic, a.industry_mode)
+            sig, res, c, track, cands = judge_pair(conds[pid], users[uid], pid, dates, ev, dic, )
         reason = reason_text(sig, res)
         ind = (res.get('업종') or (None, None, {}))[2]
         alt = (res.get('대안조건') or (None, None, {}))[2]
@@ -946,7 +951,8 @@ def main():
             '사유': reason,
             '조건별_문구': {k: v[1] for k, v in res.items() if v[1]},
             '체크리스트': checklist(c),
-            '트랙별': [{'트랙': n, 'signal': s, 'results': {k: v[0] for k, v in r.items()}} for s, r, _, n in cands],
+            '트랙별': [{'트랙': n, 'signal': s, 'results': {k: v[0] for k, v in r.items()}}
+                    for s, r, _, n in cands],
         })
 
     os.makedirs(os.path.dirname(a.out) or '.', exist_ok=True)
@@ -958,13 +964,13 @@ def main():
         json.dump(detail, f, ensure_ascii=False, indent=1)
 
     pairs = [(emoji(r['정답']), emoji(r['예측'])) for r in rows]
-    m = {'설정': {'conds': a.conds, 'industry_mode': a.industry_mode, '근거 검증': bool(ev.folder), '판정 기준일': str(REF_DATE)},
-         '전체': metrics(pairs), '근거 못 찾아 뺀 조건': [{'공고ID': p, '위치': w, '근거': e} for p, w, e in sorted(set(ev.dropped))]}
+    m = {'설정': {'conds': a.conds, '근거 검증': bool(ev.folder), '판정 기준일': str(REF_DATE)}, '전체': metrics(pairs),
+         '근거 못 찾아 뺀 조건': [{'공고ID': p, '위치': w, '근거': e} for p, w, e in sorted(set(ev.dropped))]}
     with open(a.out + '_metrics.json', 'w', encoding='utf-8') as f:
         json.dump(m, f, ensure_ascii=False, indent=1)
 
     t = m['전체']
-    print(f"[{a.industry_mode}] {a.conds}")
+    print(f"{a.conds}  ({len(rows)}쌍)")
     print(f"  Accuracy {t['Accuracy']}  False green {t['False green']} ({t['🟢 예측 수']}개 중)  Macro-F1 {t['Macro-F1']}")
     print(f"  근거 못 찾아 뺀 조건 {len(m['근거 못 찾아 뺀 조건'])}개")
 
