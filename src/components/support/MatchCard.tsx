@@ -93,6 +93,18 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
         {/* 3줄까지만 보이고 넘치면 … 으로 줄인다. 3줄 안에 끝나는 요약은 전부 보인다 */}
         {p.summary && <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-ink-soft">{p.summary}</p>}
 
+        {/* 🟡 조건부 카드: [조건] 문구 (나애님 condition_text.py 출력) */}
+        {r.verdict === '조건부' && r.conditionTexts && r.conditionTexts.length > 0 && (
+          <ul className="flex flex-col gap-1">
+            {r.conditionTexts.map((text, i) => (
+              <li key={i} className="flex items-start gap-1.5 text-xs text-warn">
+                <span className="mt-0.5 shrink-0">•</span>
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
         {/* 링크는 카드 맨 아래에 붙여 같은 줄 카드끼리 위치를 맞춘다 */}
         <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2">
           <a

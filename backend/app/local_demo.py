@@ -37,6 +37,41 @@ def _load_notices():
     return _notices
 
 LOCAL_DEMO_NOTICE = '실제 공고 검색(단순 키워드) 데모입니다. 공고별 자격 조건 판정 AI가 아직 연결되지 않아 신청 가능 여부는 모두 확인 필요입니다.'
+
+
+def _run_judgment(profile: dict, announcements: list, notices: dict) -> dict:
+    """판정 엔진 호출 → {pblancId: {signal, condition_texts}} 반환.
+
+    현재 상태: 판정 엔진(주희님 코드) 미연결. 빈 dict 반환.
+    연결 방법:
+      1. 주희님 판정 모듈을 import한 뒤 아래 블록을 구현한다.
+      2. 판정 결과는 from_judgment(result, notices) 를 통해 condition_texts로 변환한다.
+      3. 반환 형태: {pblancId: {'signal': '🟡', 'condition_texts': [...]}}
+
+    참고: from_judgment()가 받는 result 형태 (주희님 → 나애님 → 여기)
+      {
+        'pblancId': 'PBLN_...',
+        'signal': '🟡',
+        'stage': '예비',
+        'results': {'지역': '🟡', '업력': '❔', ...},
+        'track': null,
+        'industry_reason': '제외',   # 업종 🟡일 때만
+        'industry_hit': ['음식점업'],  # 제외 업종 걸렸을 때
+        'alt_left': [1],             # 대안조건 🟡일 때
+      }
+    """
+    # TODO: 판정 엔진 연결 시 여기를 채운다
+    # try:
+    #     from judgment_engine import run_batch  # 주희님 모듈명에 맞게 수정
+    #     raw_results = run_batch(profile, [a.announcement_id for a in announcements])
+    #     return {
+    #         r['pblancId']: from_judgment(r, notices)
+    #         for r in raw_results
+    #         if r.get('pblancId')
+    #     }
+    # except Exception as e:
+    #     log.warning('판정 엔진 호출 실패, 확인 필요로 대체: %s', e)
+    return {}
 REGIONS = [('서울','서울특별시'),('인천','인천광역시'),('경기','경기도'),('부산','부산광역시'),('대구','대구광역시'),('대전','대전광역시'),('광주','광주광역시'),('울산','울산광역시'),('세종','세종특별자치시'),('강원','강원특별자치도'),('충북','충청북도'),('충남','충청남도'),('충청북','충청북도'),('충청남','충청남도'),('전북','전북특별자치도'),('전남','전라남도'),('경북','경상북도'),('경남','경상남도'),('제주','제주특별자치도')]
 IGNORE = {'서울','경기','인천','부산','대구','대전','광주','울산','세종','제주','강원','경북','경남','충북','충남','전북','전남','준비','지원','사업','신청','창업','예비창업','하려고','그리고','있어요','해주세요','합니다','부탁해','저는','제가','되어','받고','원해','하려','이제','있는','싶어요','부족해요'}
 TYPES = ('융자','보조금','보증','교육','멘토링','공간','사업화','기타')
@@ -305,6 +340,9 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         candidates=[(score,a) for score,a in active if score>0]
         if not candidates:candidates=active
     notices = _load_notices()
+    # 판정 엔진 연결 준비: judgment_map은 주희님 판정 결과를 {pblancId: 판정결과} 형태로 받는다.
+    # 현재는 판정 엔진이 미연결이므로 빈 dict. 연결 시 아래 _run_judgment()를 구현한다.
+    judgment_map = _run_judgment(profile, [a for _,a in candidates[:limit]], notices)
     results=[]
     for score,a in candidates[:limit]:
         program=_program(a,today)
@@ -314,11 +352,31 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         search_rank = rag_rank[a.announcement_id]['rank'] if a.announcement_id in rag_rank else None
         # 조건 JSON이 있는 공고는 has_conditions=True 표시 (판정 엔진 연결 전 준비)
         has_conditions = a.announcement_id in notices
+        # 판정 결과가 있으면 신호등과 condition_texts를 채운다; 없으면 확인 필요로 표시
+        jmt = judgment_map.get(a.announcement_id)
+        if jmt:
+            signal = jmt.get('signal', '⚪')
+            # 프론트엔드 MatchVerdict 타입에 맞춰 반환 (types.ts)
+            verdict = {'🟢': '자격 충족', '🟡': '조건부', '🔴': '자격 미달', '⚪': '확인 필요'}.get(signal, '확인 필요')
+            condition_texts = jmt.get('condition_texts', [])
+            headline = {
+                '🟢': '신청 가능 · 확인된 자격조건 충족',
+                '🟡': '조건부 가능 · 아래 조건을 확인하세요',
+                '🔴': '신청 불가 · 필수 자격조건 미충족',
+                '⚪': '확인 필요 · 추가 정보가 필요합니다',
+            }.get(signal, '관련 공고 검색됨 · 신청자격 확인 필요')
+        else:
+            signal = '⚪'
+            verdict = '확인 필요'
+            condition_texts = []
+            headline = '관련 공고 검색됨 · 신청자격 확인 필요'
         results.append({
-          'program':program,'verdict':'확인 필요','score':percent,'searchScore':float(score),'searchRank':search_rank,'judgmentScore':None,'rules':[],
-          'headline':'관련 공고 검색됨 · 신청자격 확인 필요',
+          'program':program,'verdict':verdict,'signal':signal,'score':percent,
+          'searchScore':float(score),'searchRank':search_rank,'judgmentScore':None,'rules':[],
+          'headline':headline,
           'reasons':[],'cautions':[], 'exceptions':[], 'daysLeft':days,
-          'hasConditions': has_conditions,  # 프론트엔드에서 "조건 추출 완료" 뱃지 등에 활용 가능
+          'hasConditions': has_conditions,
+          'conditionTexts': condition_texts,  # 🟡일 때만 값 있음. 나애님 condition_text.py 출력
         })
     return {
       'profile':profile,'missing':missing,'results':results,'conditional':[],'excluded':[],

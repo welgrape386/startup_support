@@ -130,9 +130,13 @@ export type RuleResult = {
   group?: { id: number; result: 'pass' | 'fail' | 'unknown' }
 }
 
+export type MatchSignal = '🟢' | '🟡' | '⚪' | '🔴'
+
 export type MatchResult = {
   program: Omit<SupportProgram, 'eligibility'>
   verdict: MatchVerdict
+  /** 신호등 이모지. 판정 엔진 연결 후 채워진다 (없으면 undefined) */
+  signal?: MatchSignal
   score: number
   rules: RuleResult[]
   headline: string
@@ -141,6 +145,12 @@ export type MatchResult = {
   /** 예외 조항 (판정에 반영하지 않음) */
   exceptions: ExceptionClause[]
   daysLeft: number | null
+  /** 🟡(조건부) 공고에 붙는 [조건] 문구 목록. 나애님 condition_text.py 출력 */
+  conditionTexts?: string[]
+  /** 조건 JSON이 추출된 공고 여부 (뱃지 표시용) */
+  hasConditions?: boolean
+  /** 검색 순위 (RAG 결과, 없으면 null) */
+  searchRank?: number | null
 }
 
 export type SupportMatchResponse = {
