@@ -162,6 +162,11 @@ export function SupportMatch() {
   if (r?.biz_candidates && r.biz_candidates.length > 1)
     ambiguousList.push({ raw: r.biz_raw ?? '사업장', candidates: r.biz_candidates })
 
+  // 서울 밖 창업 안내: 창업예정지 또는 사업장의 sido가 서울 외 지역일 때
+  const isOutsideSeoul =
+    (r?.plan_sido != null && r.plan_sido !== '서울특별시') ||
+    (r?.biz_sido != null && r.biz_sido !== '서울특별시')
+
   const complete = useCallback(() => {
     const req = { text: text.trim() }
     saveInput(req)
@@ -269,6 +274,11 @@ export function SupportMatch() {
                       {' '}· {raw}은(는) {candidates.join(' · ')}에 있어요 — 구 이름으로 적어주세요
                     </span>
                   ))}
+                  {isOutsideSeoul && (
+                    <span className="text-warn">
+                      {' '}· 이 서비스는 서울에서 창업하는 분 대상이에요. 서울 외 지역은 일부 공고가 맞지 않을 수 있어요.
+                    </span>
+                  )}
                 </>
               )}
             </p>
