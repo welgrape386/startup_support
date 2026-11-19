@@ -2,11 +2,11 @@
 백엔드에서 부르는 검색
 
     from search_service import search
-    search("마포구에서 디저트 카페를 준비하는 예비창업자예요", user_gu="마포구", stage="예비", need="홍보·판매")
+    search("마포구에서 디저트 카페를 준비하는 예비창업자예요", user_gu="마포구", stage="예비창업", need="홍보·판매")
 
 인자 (모르면 "")
-- user_gu  : 서울 구 이름. 예비면 창업 예정 구, 개업이면 사업장 구 (예: "마포구")
-- stage    : "예비" / "개업"
+- user_gu  : 서울 구 이름. 예비창업이면 창업 예정 구, 초기창업이면 사업장 구 (예: "마포구")
+- stage    : "예비창업" / "초기창업" (판정규칙 · users_v2와 같은 값)
 - need     : 자금, 교육·컨설팅, 공간·시설, 홍보·판매, 인력, 기술개발, 해외진출, 제도·인증, 기타, 미지정
              1~2개, 2개면 "|"로 구분 (예: "홍보·판매|인력")
 - industry : 업종 원문 표현 (예: "디저트 카페")
@@ -27,6 +27,7 @@ SEARCH_TOP_K = 20
 NEED_RANGE = 40      # 원하는 지원 올리기·특수 대상 내리기를 상위 몇 개에서 돌릴지 (#27)
 ELIG_HINT = " 신청자격 지원대상 신청대상"
 DROP_GUIDE = True
+STAGE = {"예비창업": "예비", "초기창업": "개업"}   # 실험 코드는 예비 / 개업으로 씀
 _engine = None
 
 def _load():
@@ -47,6 +48,7 @@ def _strip(text):
 
 def search(query, user_gu="", k=SEARCH_TOP_K, stage="", need="", industry="", age="", industry_cat=""):
     hy, v1, engine = _load()
+    stage = STAGE.get(stage, stage)
     ranked = engine.search(query, k, user_gu, stage, need, industry, str(age or ""), industry_cat)
     score = hy.scores(query)
     best = v1.best_passages(query)
@@ -60,5 +62,5 @@ def search(query, user_gu="", k=SEARCH_TOP_K, stage="", need="", industry="", ag
 
 if __name__ == "__main__":
     q = "29살이고 마포구에서 디저트 카페를 준비하는 예비창업자예요. 오픈하면 라이브커머스로도 판매해보고 싶어요."
-    for x in search(q, "마포구", 5, stage="예비", need="홍보·판매"):
+    for x in search(q, "마포구", 5, stage="예비창업", need="홍보·판매"):
         print(x["rank"], x["pblancId"], x["evidence_from"], x["evidence"][:60].replace("\n", " "))
