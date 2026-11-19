@@ -347,9 +347,13 @@ export function SupportMatchDetail() {
             )}
             {/* 예은님 추출 지원내용(supportDetail): 사용자가 받을 수 있는 지원 내용 */}
             {p.supportDetail ? (
-              <p className="text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
-                {p.supportDetail}
-              </p>
+              <ul className="flex flex-col gap-1.5">
+                {p.supportDetail.split('\n').filter(Boolean).map((line, i) => (
+                  <li key={i} className="text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.7' }}>
+                    {line}
+                  </li>
+                ))}
+              </ul>
             ) : p.fields['지원내용'] ? (
               /* 예은님 데이터 없을 때 API fields['지원내용'] 폴백 */
               <p className="text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
@@ -516,9 +520,12 @@ export function SupportMatchDetail() {
                 우대·가산점 정보가 없어요. {/* TODO: API 필드 bonusPoints */}
               </p>
             ) : (
-              <ul className="flex flex-wrap gap-2">
-                {bonusPoints.map((b) => (
-                  <li key={b}><Badge tone="info">{b}</Badge></li>
+              <ul className="flex flex-col gap-2">
+                {bonusPoints.map((b, i) => (
+                  <li key={i} className="text-sm text-ink-soft">
+                    <span className="text-info font-semibold mr-1">◎</span>
+                    {typeof b === 'string' ? b : b.내용}
+                  </li>
                 ))}
               </ul>
             )}

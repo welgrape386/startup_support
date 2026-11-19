@@ -89,8 +89,8 @@ export type SupportProgram = {
   applyUrl?: string                       // TODO: API 필드
   /** 제출 서류 목록. 문자열 또는 필수/선택·대상자 구분 객체 */
   submissionDocs?: SubmissionDoc[]
-  /** 우대·가산점 항목 */
-  bonusPoints?: string[]                  // TODO: API 필드
+  /** 우대·가산점 항목 — {내용, 가점?, 근거?} 객체 배열 (info_v4) */
+  bonusPoints?: { 내용: string; 가점?: string | null; 근거?: string | null }[]
   /** 첨부 파일 (공고 원문 PDF/HWP 등) */
   attachmentFiles?: { name: string; url: string }[]  // TODO: API 필드
   /** 차수형 모집 일정 */
