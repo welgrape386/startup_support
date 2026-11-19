@@ -35,7 +35,7 @@ judge_in = to_judge_profile(row)
 ```
 
 - 출력 키 = DB 컬럼 이름 (input_text, age, res_sido … ask_fields). 키는 항상 다 있고 빈 값은 null
-- 판정에는 `to_judge_profile`이 users_v2 한국어 키로 바꿔서 넘김
+- 판정에는 `to_judge_profile`이 users_v2 한국어 키 10칸 + industry + need로 바꿔서 넘김 (need는 B1이 씀)
 - `.env`에 키가 없거나 LLM이 실패하면 규칙 결과만 줌
 - 모델 gpt-4.1-mini, 1번에 약 1.2초, 제출 1,000번에 약 $1.3
 - 패키지 : `openai`, `python-dotenv`
