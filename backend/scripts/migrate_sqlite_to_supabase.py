@@ -98,8 +98,11 @@ def upsert_rows(pg_conn, table: str, cols: list, rows: list):
         return
 
     # 컬럼명에 예약어 있을 수 있으므로 큰따옴표로 감싸기
+    # SQLAlchemy text()는 :key 바인딩 사용 (psycopg %(key)s 아님)
+    # 한글·특수문자 컬럼명은 별칭으로 매핑
+    safe_alias = {c: f'col_{i}' for i, c in enumerate(cols)}
     col_str = ', '.join(f'"{c}"' for c in cols)
-    placeholders = ', '.join(f'%({c})s' for c in cols)
+    placeholders = ', '.join(f':{safe_alias[c]}' for c in cols)
 
     # PK 컬럼 찾기 (SQLite PRAGMA)
     pk_info = sqlite_conn.execute(f'PRAGMA table_info("{table}")').fetchall()
@@ -118,14 +121,14 @@ def upsert_rows(pg_conn, table: str, cols: list, rows: list):
     else:
         sql = f'INSERT INTO "{table}" ({col_str}) VALUES ({placeholders}) ON CONFLICT DO NOTHING'
 
-    # None → null, bool 변환
+    # None → null, 별칭으로 키 변환
     cleaned = []
     for row in rows:
         r = {}
         for k, v in row.items():
             if isinstance(v, bytes):
                 v = v.decode('utf-8', errors='replace')
-            r[k] = v
+            r[safe_alias[k]] = v
         cleaned.append(r)
 
     with pg_engine.connect() as conn:
