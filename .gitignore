@@ -12,3 +12,7 @@ data/programs.index.json
 # Python 캐시 (실행 시 자동 생성)
 __pycache__/
 *.pyc
+
+# SQLite DB (실행 시 자동 생성, data/ 폴더 안의 DB만 사용)
+*.db
+!backend/data/*.db
