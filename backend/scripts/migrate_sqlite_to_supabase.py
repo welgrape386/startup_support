@@ -40,38 +40,54 @@ except ImportError:
     import psycopg
 
 import sqlite3
-from sqlalchemy import create_engine, text, inspect
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 # --- SQLite 연결 ---
 sqlite_conn = sqlite3.connect(str(SQLITE_PATH))
 sqlite_conn.row_factory = sqlite3.Row
 
-# --- PostgreSQL 연결 ---
-pg_url = DATABASE_URL
-if pg_url.startswith('postgresql://'):
-    pg_url = pg_url.replace('postgresql://', 'postgresql+psycopg://', 1)
-elif pg_url.startswith('postgres://'):
-    pg_url = pg_url.replace('postgres://', 'postgresql+psycopg://', 1)
+# --- PostgreSQL 연결 (psycopg 직접) ---
+pg_dsn = DATABASE_URL
+if pg_dsn.startswith('postgresql+psycopg://'):
+    pg_dsn = pg_dsn.replace('postgresql+psycopg://', 'postgresql://', 1)
 
-pg_engine = create_engine(pg_url, pool_pre_ping=True)
+# SQLAlchemy engine (테이블 생성용)
+pg_url_sa = DATABASE_URL
+if pg_url_sa.startswith('postgresql://'):
+    pg_url_sa = pg_url_sa.replace('postgresql://', 'postgresql+psycopg://', 1)
+elif pg_url_sa.startswith('postgres://'):
+    pg_url_sa = pg_url_sa.replace('postgres://', 'postgresql+psycopg://', 1)
+
+pg_engine = create_engine(pg_url_sa, pool_pre_ping=True)
 
 # --- 테이블 스키마 생성 (SQLAlchemy 모델 사용) ---
 print('1) PostgreSQL에 테이블 생성 중...')
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-# DB URL을 PostgreSQL로 임시 교체
 os.environ['DATABASE_URL'] = DATABASE_URL
 
 from app.models import Base as ModelBase
-from app import extended_models  # UserRequest, MatchRun 등 추가 모델
+from app import extended_models
 
 ModelBase.metadata.create_all(pg_engine)
-# extended_models의 Base도 생성
 from app.extended_models import Base as ExtBase
 ExtBase.metadata.create_all(pg_engine)
 
 print('   테이블 생성 완료')
+
+# --- PostgreSQL boolean 컬럼 목록 조회 ---
+def get_pg_bool_columns(table: str) -> set:
+    """PostgreSQL에서 boolean 타입인 컬럼 이름 집합 반환"""
+    try:
+        with pg_engine.connect() as conn:
+            result = conn.execute(text(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = :tbl AND data_type = 'boolean'"
+            ), {'tbl': table})
+            return {row[0] for row in result}
+    except Exception:
+        return set()
 
 # --- 데이터 복사 ---
 TABLES_IN_ORDER = [
@@ -92,47 +108,51 @@ def get_sqlite_rows(table: str):
     return cols, [dict(zip(cols, row)) for row in rows]
 
 
-def upsert_rows(pg_conn, table: str, cols: list, rows: list):
+def upsert_rows(table: str, cols: list, rows: list):
     if not rows:
         print(f'   {table}: 0행 (스킵)')
         return
 
-    # 컬럼명에 예약어 있을 수 있으므로 큰따옴표로 감싸기
-    # SQLAlchemy text()는 :key 바인딩 사용 (psycopg %(key)s 아님)
-    # 한글·특수문자 컬럼명은 별칭으로 매핑
-    safe_alias = {c: f'col_{i}' for i, c in enumerate(cols)}
-    col_str = ', '.join(f'"{c}"' for c in cols)
-    placeholders = ', '.join(f':{safe_alias[c]}' for c in cols)
+    # PostgreSQL의 boolean 컬럼 파악
+    bool_cols = get_pg_bool_columns(table)
 
     # PK 컬럼 찾기 (SQLite PRAGMA)
     pk_info = sqlite_conn.execute(f'PRAGMA table_info("{table}")').fetchall()
-    pk_cols = [row[1] for row in pk_info if row[5] > 0]  # row[5] = pk
+    pk_cols = [row[1] for row in pk_info if row[5] > 0]
 
-    if pk_cols:
-        pk_str = ', '.join(f'"{c}"' for c in pk_cols)
-        update_str = ', '.join(
-            f'"{c}" = EXCLUDED."{c}"'
-            for c in cols if c not in pk_cols
-        )
-        sql = (
-            f'INSERT INTO "{table}" ({col_str}) VALUES ({placeholders}) '
-            f'ON CONFLICT ({pk_str}) DO UPDATE SET {update_str}'
-        )
-    else:
-        sql = f'INSERT INTO "{table}" ({col_str}) VALUES ({placeholders}) ON CONFLICT DO NOTHING'
+    # psycopg 직접 연결로 upsert (% 바인딩 사용 — psycopg 네이티브)
+    with psycopg.connect(pg_dsn) as conn:
+        with conn.cursor() as cur:
+            col_str = ', '.join(f'"{c}"' for c in cols)
+            placeholders = ', '.join(['%s'] * len(cols))
 
-    # None → null, 별칭으로 키 변환
-    cleaned = []
-    for row in rows:
-        r = {}
-        for k, v in row.items():
-            if isinstance(v, bytes):
-                v = v.decode('utf-8', errors='replace')
-            r[safe_alias[k]] = v
-        cleaned.append(r)
+            if pk_cols:
+                pk_str = ', '.join(f'"{c}"' for c in pk_cols)
+                update_str = ', '.join(
+                    f'"{c}" = EXCLUDED."{c}"'
+                    for c in cols if c not in pk_cols
+                )
+                sql = (
+                    f'INSERT INTO "{table}" ({col_str}) VALUES ({placeholders}) '
+                    f'ON CONFLICT ({pk_str}) DO UPDATE SET {update_str}'
+                )
+            else:
+                sql = f'INSERT INTO "{table}" ({col_str}) VALUES ({placeholders}) ON CONFLICT DO NOTHING'
 
-    with pg_engine.connect() as conn:
-        conn.execute(text(sql), cleaned)
+            # 값 변환: bytes → str, boolean 컬럼 smallint → bool
+            cleaned = []
+            for row in rows:
+                r = []
+                for c in cols:
+                    v = row[c]
+                    if isinstance(v, bytes):
+                        v = v.decode('utf-8', errors='replace')
+                    if c in bool_cols and isinstance(v, int):
+                        v = bool(v)
+                    r.append(v)
+                cleaned.append(r)
+
+            cur.executemany(sql, cleaned)
         conn.commit()
 
     print(f'   {table}: {len(rows)}행 완료')
@@ -140,7 +160,6 @@ def upsert_rows(pg_conn, table: str, cols: list, rows: list):
 
 print('2) 데이터 복사 중...')
 for table in TABLES_IN_ORDER:
-    # 테이블이 SQLite에 있는지 확인
     exists = sqlite_conn.execute(
         f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'"
     ).fetchone()
@@ -149,12 +168,12 @@ for table in TABLES_IN_ORDER:
         continue
 
     cols, rows = get_sqlite_rows(table)
-    upsert_rows(pg_engine, table, cols, rows)
+    upsert_rows(table, cols, rows)
 
 # alembic_version도 복사
 try:
     cols, rows = get_sqlite_rows('alembic_version')
-    upsert_rows(pg_engine, 'alembic_version', cols, rows)
+    upsert_rows('alembic_version', cols, rows)
 except Exception:
     pass
 
