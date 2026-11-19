@@ -105,13 +105,14 @@ def support_match(request: SupportMatchRequest, session: Session = Depends(get_s
 
     mode = os.getenv('AI_MATCH_MODE', 'rules').strip().lower()
     extracted = None
+    _extract_raw: dict | None = None  # 나애님 raw 결과 (DB 저장용)
 
     if mode == 'rules':
         # 나애님 규칙만 (API 없이, 입력 중 미리보기와 동일)
         from user_extract import extract_quick
         from user_extraction.adapter import to_legacy
-        raw = extract_quick(request.text)
-        extracted = to_legacy(raw)
+        _extract_raw = extract_quick(request.text)
+        extracted = to_legacy(_extract_raw)
 
     elif mode == 'llm':
         if not os.getenv('OPENAI_API_KEY'):
@@ -121,8 +122,8 @@ def support_match(request: SupportMatchRequest, session: Session = Depends(get_s
         try:
             from user_extract import extract
             from user_extraction.adapter import to_legacy
-            raw = extract(request.text)
-            extracted = to_legacy(raw)
+            _extract_raw = extract(request.text)
+            extracted = to_legacy(_extract_raw)
         except Exception as exc:
             raise HTTPException(502, detail=f'사용자 정보 AI 추출 실패: {type(exc).__name__}') from exc
 
@@ -135,7 +136,7 @@ def support_match(request: SupportMatchRequest, session: Session = Depends(get_s
     payload = get_match_response(request, session, extracted=extracted)
 
     from app.local_run_store import maybe_save_demo_run
-    maybe_save_demo_run(session, payload)  # opt-in only; user prompts are private by default
+    maybe_save_demo_run(session, payload, extract_raw=_extract_raw)  # opt-in (SAVE_DEMO_RUNS=1)
     return payload
 
 
@@ -148,10 +149,12 @@ class UserExtractRequest(BaseModel):
     user_id: str | None = None
 
 @app.post('/api/v1/user-extract', summary='사용자 자연어 추출 (나애님 v2)')
-def user_extract(payload: UserExtractRequest):
+def user_extract(payload: UserExtractRequest, session: Session = Depends(get_session)):
     """
     입력 중(rules) 또는 제출(llm) 추출.
     반환: { mode, ask_fields, result (DB 컬럼명 flat dict) }
+    rules 모드: DB 저장 안 함 (입력 중 호출이므로)
+    llm 모드: SAVE_DEMO_RUNS=1 이면 user_requests에 저장
     """
     import os
     import sys
@@ -178,9 +181,13 @@ def user_extract(payload: UserExtractRequest):
         raise HTTPException(503, detail='OPENAI_API_KEY가 필요합니다. .env 설정을 확인하세요.')
     try:
         row = extract(payload.text)
+        # llm 모드 제출 결과 DB 저장 (opt-in)
+        from app.local_run_store import save_user_request
+        request_id = save_user_request(session, row, mode='llm')
         return {
             'mode': 'llm',
             'is_real_llm': True,
+            'request_id': request_id,  # 저장됐을 때만 non-null
             'ask_fields': row.get('ask_fields'),
             'ask_text': {k: ASK_TEXT[k] for k in (row.get('ask_fields') or [])},
             'result': row,
