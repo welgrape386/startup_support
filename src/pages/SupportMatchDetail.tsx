@@ -354,9 +354,11 @@ export function SupportMatchDetail() {
                           {item.label}
                         </span>
                         {item.quote && (
-                          <p className="text-[13px] text-muted" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
-                            {item.quote}
-                          </p>
+                          <div className="mt-1 rounded-md bg-bg-soft px-3 py-2.5">
+                            <p className="text-[13px] text-muted" style={{ wordBreak: 'keep-all', lineHeight: '1.7' }}>
+                              {item.quote}
+                            </p>
+                          </div>
                         )}
                       </li>
                     ))}
