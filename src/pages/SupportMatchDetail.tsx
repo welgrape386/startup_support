@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Badge } from '@/components/Badge'
 import { Button, buttonClasses } from '@/components/Button'
@@ -60,11 +60,73 @@ const isPdf = (url: string) => fileExt(url) === 'pdf'
 const isImage = (url: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt(url))
 const isDoc = (url: string) => ['hwp', 'hwpx', 'docx', 'doc'].includes(fileExt(url))
 
+/** 예은님 조건 JSON의 주요 조건 필드 → 화면에 보여줄 조건 목록으로 변환 */
+function conditionsFromJson(json: Record<string, unknown> | null): { label: string; quote: string }[] {
+  if (!json) return []
+  const FIELD_LABEL: Record<string, string> = {
+    나이: '나이', 지역: '지역', 사업자등록: '사업자등록', 업력: '업력',
+    업종: '업종', 신청자_유형: '신청자 유형', 성별: '성별',
+    특수자격: '특수 자격', 기업규모: '기업 규모',
+  }
+  const result: { label: string; quote: string }[] = []
+  for (const [key, label] of Object.entries(FIELD_LABEL)) {
+    const f = json[key] as Record<string, unknown> | undefined
+    if (!f || f['상태'] === '없음' || f['상태'] === null) continue
+    const quote = (f['근거'] as string | null) ?? ''
+    // 조건 요약 문구 만들기
+    let summary = ''
+    if (key === '나이' && (f['min'] != null || f['max'] != null)) {
+      const min = f['min'] != null ? `만 ${f['min']}세 이상` : ''
+      const max = f['max'] != null ? `만 ${f['max']}세 이하` : ''
+      summary = [min, max].filter(Boolean).join(', ')
+    } else if (key === '지역') {
+      const ranges = (f['범위'] as { 시도?: string; 시군구?: string }[] | undefined) ?? []
+      summary = ranges.map((r) => [r['시도'], r['시군구']].filter(Boolean).join(' ')).join(', ')
+    } else if (key === '사업자등록') {
+      summary = String(f['값'] ?? '')
+    } else if (key === '업력') {
+      const lo = f['min_개월'] != null ? `${f['min_개월']}개월 이상` : ''
+      const hi = f['max_개월'] != null ? `${f['max_개월']}개월 이내` : ''
+      summary = [lo, hi].filter(Boolean).join(', ') || '업력 조건 있음'
+    } else if (key === '업종') {
+      const names = (f['업종명'] as { 허용?: string[]; 제외?: string[] } | undefined) ?? {}
+      if ((names['허용'] ?? []).length > 0) summary = `허용: ${(names['허용'] ?? []).slice(0, 3).join(', ')}`
+      else if ((names['제외'] ?? []).length > 0) summary = `제외: ${(names['제외'] ?? []).slice(0, 3).join(', ')}`
+      else summary = '업종 조건 있음'
+    } else if (key === '신청자_유형') {
+      summary = ((f['값'] as string[]) ?? []).join(', ')
+    } else if (key === '성별') {
+      summary = String(f['값'] ?? '')
+    } else if (key === '기업규모') {
+      summary = String(f['구분'] ?? '')
+    } else {
+      summary = `${label} 조건 있음`
+    }
+    if (summary) result.push({ label: `${label}: ${summary}`, quote })
+  }
+  return result
+}
+
 export function SupportMatchDetail() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const navigate = useNavigate()
   const result = (location.state as { result?: MatchResult } | null)?.result
+
+  // 예은님 조건 JSON API 호출
+  const [conditionJson, setConditionJson] = useState<Record<string, unknown> | null>(null)
+  const [conditionLoaded, setConditionLoaded] = useState(false)
+  useEffect(() => {
+    if (!id) return
+    const apiBase = (import.meta as { env?: { VITE_API_BASE_URL?: string } }).env?.VITE_API_BASE_URL ?? ''
+    fetch(`${apiBase}/api/v1/announcements/${id}/conditions`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.condition_json) setConditionJson(data.condition_json)
+        setConditionLoaded(true)
+      })
+      .catch(() => setConditionLoaded(true))
+  }, [id])
 
   const [checked, setChecked] = useState<Record<string, boolean>>(() => {
     try {
@@ -238,9 +300,8 @@ export function SupportMatchDetail() {
           {/* 4.1.4 자격 조건 */}
           <Card>
             <SectionTitle>자격 조건</SectionTitle>
-            {result.rules.length === 0 ? (
-              <p className="text-sm text-muted">정보 없음</p>
-            ) : (
+            {result.rules.length > 0 ? (
+              /* 판정 엔진 연결 후 채워짐 */
               <ul className="flex flex-col gap-4">
                 {result.rules.map((rr, i) => (
                   <li key={i} className="flex items-start gap-2.5">
@@ -268,6 +329,36 @@ export function SupportMatchDetail() {
                   </li>
                 ))}
               </ul>
+            ) : conditionLoaded && conditionJson ? (
+              /* 예은님 조건 JSON으로 채움 (판정 결과 없을 때) */
+              (() => {
+                const items = conditionsFromJson(conditionJson)
+                return items.length > 0 ? (
+                  <ul className="flex flex-col gap-4">
+                    {items.map((item, i) => (
+                      <li key={i} className="flex flex-col gap-1">
+                        <span className="text-sm font-semibold text-ink" style={{ wordBreak: 'keep-all' }}>
+                          {item.label}
+                        </span>
+                        {item.quote && (
+                          <blockquote
+                            className="border-l-2 border-primary-200 pl-2 text-[12px] italic text-muted"
+                            style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}
+                          >
+                            {item.quote}
+                          </blockquote>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted">정보 없음</p>
+                )
+              })()
+            ) : conditionLoaded ? (
+              <p className="text-sm text-muted">정보 없음</p>
+            ) : (
+              <p className="text-sm text-muted">불러오는 중…</p>
             )}
           </Card>
 
