@@ -59,26 +59,31 @@ if pg_url_sa.startswith('postgresql://'):
 elif pg_url_sa.startswith('postgres://'):
     pg_url_sa = pg_url_sa.replace('postgres://', 'postgresql+psycopg://', 1)
 
-pg_engine = create_engine(
-    pg_url_sa,
-    pool_pre_ping=True,
-    connect_args={"prepare_threshold": None},  # Transaction pooler: prepared statement 비활성화
-)
+pg_engine = create_engine(pg_url_sa, pool_pre_ping=True)
 
-# --- 테이블 스키마 생성 (SQLAlchemy 모델 사용) ---
+# --- 테이블 스키마 생성 (이미 존재하면 스킵) ---
 print('1) PostgreSQL에 테이블 생성 중...')
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-os.environ['DATABASE_URL'] = DATABASE_URL
+# 테이블이 이미 있는지 psycopg로 직접 확인 후 없을 때만 생성
+with psycopg.connect(pg_dsn, prepare_threshold=None) as _chk:
+    with _chk.cursor() as _cur:
+        _cur.execute(
+            "SELECT COUNT(*) FROM information_schema.tables "
+            "WHERE table_schema='public' AND table_name='announcements'"
+        )
+        _has_tables = (_cur.fetchone()[0] or 0) > 0
 
-from app.models import Base as ModelBase
-from app import extended_models
-
-ModelBase.metadata.create_all(pg_engine)
-from app.extended_models import Base as ExtBase
-ExtBase.metadata.create_all(pg_engine)
-
-print('   테이블 생성 완료')
+if not _has_tables:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    os.environ['DATABASE_URL'] = DATABASE_URL
+    from app.models import Base as ModelBase
+    from app import extended_models
+    ModelBase.metadata.create_all(pg_engine)
+    from app.extended_models import Base as ExtBase
+    ExtBase.metadata.create_all(pg_engine)
+    print('   테이블 생성 완료')
+else:
+    print('   테이블 이미 존재 — 스킵')
 
 # --- PostgreSQL boolean 컬럼 목록 조회 ---
 def get_pg_bool_columns(table: str) -> set:
