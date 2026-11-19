@@ -332,7 +332,7 @@ export function SupportMatchDetail() {
             </dl>
           </Card>
 
-          {/* 4.1.2 지원 내용 */}
+          {/* 4.1.2 지원 내용 — 예은님 추출 supportDetail 우선, 없으면 API fields['지원내용'] */}
           <Card>
             <SectionTitle>지원 내용</SectionTitle>
             {p.amountMaxManwon != null && (
@@ -345,26 +345,31 @@ export function SupportMatchDetail() {
                 금리: <span className="font-semibold text-ink">{p.interestRate}</span>
               </p>
             )}
-            {p.supportDetail && (
-              <p className="mb-2 text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
+            {/* 예은님 추출 지원내용(supportDetail): 사용자가 받을 수 있는 지원 내용 */}
+            {p.supportDetail ? (
+              <p className="text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
                 {p.supportDetail}
               </p>
+            ) : p.fields['지원내용'] ? (
+              /* 예은님 데이터 없을 때 API fields['지원내용'] 폴백 */
+              <p className="text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
+                {p.fields['지원내용']}
+              </p>
+            ) : (
+              <p className="text-sm text-muted">정보 없음</p>
             )}
-            {/* 카드는 요약(80자), 상세는 원문 전체 (사업개요). 줄바꿈과 ☞ 항목을 그대로 보여준다 */}
-            {(p.fields['사업개요'] || p.summary) && (
+          </Card>
+
+          {/* 4.1.2b 사업 개요 — API 사업개요 or summary (지원 내용과 분리) */}
+          {(p.fields['사업개요'] || p.summary) && (
+            <Card>
+              <SectionTitle>사업 개요</SectionTitle>
+              {/* 줄바꿈과 ☞ 항목을 그대로 보여준다 */}
               <p className="whitespace-pre-line text-sm text-ink-soft" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
                 {p.fields['사업개요'] || p.summary}
               </p>
-            )}
-            {p.fields['지원내용'] && (
-              <blockquote
-                className="mt-3 border-l-2 border-primary-400 pl-3 text-[13px] italic text-muted"
-                style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}
-              >
-                {p.fields['지원내용']}
-              </blockquote>
-            )}
-          </Card>
+            </Card>
+          )}
 
           {/* 4.1.3 접수 기간 */}
           <Card>
