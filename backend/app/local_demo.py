@@ -8,6 +8,7 @@ from datetime import date
 import logging
 import os
 import re
+import sys
 from pathlib import Path
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session, selectinload
@@ -16,7 +17,30 @@ from app.schemas import SupportMatchRequest
 from app.rag_search import search_ranked, TOP_K
 from app.condition_text import load_notices, from_judgment
 
-log = logging.getLogger(__name__)
+# 주희님 판정 엔진 경로 추가
+_JUDGMENT_DIR = Path(__file__).resolve().parents[2] / 'judgment' / 'proposal'
+if str(_JUDGMENT_DIR) not in sys.path:
+    sys.path.insert(0, str(_JUDGMENT_DIR))
+
+try:
+    import rule_judge as _rj
+    _CONDS_FOLDER = _JUDGMENT_DIR / 'conds_gold30'
+    _DATES_PATH = _JUDGMENT_DIR / 'ann_dates.csv'
+    _IND_DICT_PATH = _JUDGMENT_DIR / '업종_사전.csv'
+    _rj_conds: dict | None = None
+    _rj_dates: dict | None = None
+    _rj_dic: dict | None = None
+    _rj_ev = _rj.Evidence(None)  # 근거 검증 없이 실행
+    log = logging.getLogger(__name__)
+    log.info('rule_judge 로드 성공: %s', _JUDGMENT_DIR)
+    _RULE_JUDGE_OK = True
+except ImportError as _e:
+    log = logging.getLogger(__name__)
+    log.warning('rule_judge 로드 실패, 판정 없이 계속: %s', _e)
+    _RULE_JUDGE_OK = False
+
+if not _RULE_JUDGE_OK:
+    log = logging.getLogger(__name__)
 
 # 예은님 조건 JSON 경로 (환경변수로 덮어쓸 수 있음)
 _DEFAULT_CONDITIONS_PATH = Path(__file__).resolve().parents[2] / 'backend' / 'data' / 'conditions' / 'conditions_service_v4_업종확장.json'
@@ -39,39 +63,151 @@ def _load_notices():
 LOCAL_DEMO_NOTICE = '실제 공고 검색(단순 키워드) 데모입니다. 공고별 자격 조건 판정 AI가 아직 연결되지 않아 신청 가능 여부는 모두 확인 필요입니다.'
 
 
-def _run_judgment(profile: dict, announcements: list, notices: dict) -> dict:
-    """판정 엔진 호출 → {pblancId: {signal, condition_texts}} 반환.
+def _load_rj_data():
+    """rule_judge 보조 데이터를 1회만 로드한다."""
+    global _rj_conds, _rj_dates, _rj_dic
+    if _rj_conds is None:
+        try:
+            _rj_conds = _rj.load_conds(str(_CONDS_FOLDER)) if _CONDS_FOLDER.exists() else {}
+        except Exception as e:
+            log.warning('conds_gold30 로드 실패: %s', e)
+            _rj_conds = {}
+    if _rj_dates is None:
+        try:
+            _rj_dates = _rj.load_dates(str(_DATES_PATH)) if _DATES_PATH.exists() else {}
+        except Exception as e:
+            log.warning('ann_dates.csv 로드 실패: %s', e)
+            _rj_dates = {}
+    if _rj_dic is None:
+        try:
+            _rj_dic = _rj.load_industry_dict(str(_IND_DICT_PATH)) if _IND_DICT_PATH.exists() else {}
+        except Exception as e:
+            log.warning('업종_사전.csv 로드 실패: %s', e)
+            _rj_dic = {}
 
-    현재 상태: 판정 엔진(주희님 코드) 미연결. 빈 dict 반환.
-    연결 방법:
-      1. 주희님 판정 모듈을 import한 뒤 아래 블록을 구현한다.
-      2. 판정 결과는 from_judgment(result, notices) 를 통해 condition_texts로 변환한다.
-      3. 반환 형태: {pblancId: {'signal': '🟡', 'condition_texts': [...]}}
 
-    참고: from_judgment()가 받는 result 형태 (주희님 → 나애님 → 여기)
-      {
-        'pblancId': 'PBLN_...',
-        'signal': '🟡',
-        'stage': '예비',
-        'results': {'지역': '🟡', '업력': '❔', ...},
-        'track': null,
-        'industry_reason': '제외',   # 업종 🟡일 때만
-        'industry_hit': ['음식점업'],  # 제외 업종 걸렸을 때
-        'alt_left': [1],             # 대안조건 🟡일 때
-      }
+def _profile_to_u(profile: dict) -> dict:
+    """local_demo profile dict → rule_judge.py 가 기대하는 u dict 변환.
+
+    rule_judge 기대 형태:
+      만나이: int | None
+      거주지: {"시도": str, "시군구": str | None} | None
+      창업단계: "예비창업" | "초기창업" | None
+      업력_개월: int | None
+      창업예정지: {"시도": ..., "시군구": ...} | None   # 예비창업자
+      사업장소재지: {"시도": ..., "시군구": ...} | None  # 초기창업자
+      업종: list[str] | None
+      industry: str | None
+      사업자_형태: "개인사업자" | "법인" | None
+      성별: "여성" | "남성" | None
+      특수자격: list | None
     """
-    # TODO: 판정 엔진 연결 시 여기를 채운다
-    # try:
-    #     from judgment_engine import run_batch  # 주희님 모듈명에 맞게 수정
-    #     raw_results = run_batch(profile, [a.announcement_id for a in announcements])
-    #     return {
-    #         r['pblancId']: from_judgment(r, notices)
-    #         for r in raw_results
-    #         if r.get('pblancId')
-    #     }
-    # except Exception as e:
-    #     log.warning('판정 엔진 호출 실패, 확인 필요로 대체: %s', e)
-    return {}
+    def val(key):
+        v = profile.get(key)
+        if isinstance(v, dict):
+            return v.get('value')
+        return v
+
+    sido = val('sido')
+    sigungu = val('sigungu')
+    loc = {'시도': sido, '시군구': sigungu} if sido else None
+
+    biz_stage = val('bizStage')  # "예비창업" or "초기창업" or None
+    startup_months = val('startup_months')  # int | None (업력 개월)
+
+    # industryCategory: "카페", "음식점", ... → 업종 카테고리 목록으로 변환
+    ind_cat = val('industryCategory')
+    # local_demo에서 카테고리는 한국어 문자열 1개; rule_judge는 list를 기대
+    CATEGORY_MAP = {
+        '카페': '음식·카페',
+        '음식점': '음식·카페',
+        '음식·카페': '음식·카페',
+        'IT': 'IT·소프트웨어',
+        'IT·소프트웨어': 'IT·소프트웨어',
+        '제조': '공방·제조',
+        '공방·제조': '공방·제조',
+        '도소매': '도소매·판매',
+        '도소매·판매': '도소매·판매',
+        '디자인': '디자인·콘텐츠',
+        '디자인·콘텐츠': '디자인·콘텐츠',
+        '생활서비스': '생활 서비스',
+        '생활 서비스': '생활 서비스',
+        '농식품': '식품 제조·농식품',
+        '식품 제조·농식품': '식품 제조·농식품',
+        '첨단기술': '첨단기술',
+        '기타': '기타',
+    }
+    if ind_cat:
+        mapped = CATEGORY_MAP.get(ind_cat, ind_cat)
+        업종 = [mapped]
+    else:
+        업종 = None
+
+    ind_text = val('industryText')  # 업종 원문 텍스트
+
+    # 성별
+    gender = None
+    if '여성' in (profile.get('targetGroups') or []):
+        gender = '여성'
+
+    u = {
+        '만나이': val('age'),
+        '거주지': loc,
+        '창업단계': biz_stage,
+        '업력_개월': startup_months,
+        '창업예정지': loc if biz_stage == '예비창업' else None,
+        '사업장소재지': loc if biz_stage == '초기창업' else None,
+        '업종': 업종,
+        'industry': ind_text,
+        '사업자_형태': None,  # local_demo에서 아직 추출 안 함
+        '성별': gender,
+        '특수자격': None,
+    }
+    return u
+
+
+def _run_judgment(profile: dict, announcements: list, notices: dict) -> dict:
+    """판정 엔진(주희님 rule_judge.py) 호출 → {pblancId: {signal, condition_texts}} 반환.
+
+    - conds_gold30/ 에 조건 JSON이 있는 공고만 판정한다.
+    - 조건 JSON이 없는 공고는 반환 dict에서 빠짐 → ⚪ 확인 필요로 표시된다.
+    """
+    if not _RULE_JUDGE_OK:
+        return {}
+    try:
+        _load_rj_data()
+        u = _profile_to_u(profile)
+        result_map = {}
+        for a in announcements:
+            pid = a.announcement_id
+            cond = _rj_conds.get(pid)
+            if cond is None:
+                continue  # 조건 JSON 없음 → ⚪ fallback
+            try:
+                sig, res, c, track, cands = _rj.judge_pair(cond, u, pid, _rj_dates, _rj_ev, _rj_dic)
+                # from_judgment 형태 맞추기
+                raw = {
+                    'pblancId': pid,
+                    'signal': sig,
+                    'stage': u.get('창업단계') or '',
+                    'results': {k: v[0] for k, v in res.items()} if res else {},
+                    'track': track or None,
+                }
+                # 업종 추가 정보
+                if '업종' in res:
+                    ind_v = res['업종'][0]
+                    if ind_v == _rj.COND:
+                        raw['industry_reason'] = '허용불일치'
+                    elif ind_v == _rj.NO:
+                        raw['industry_reason'] = '제외'
+                result_map[pid] = from_judgment(raw, notices)
+            except Exception as e:
+                log.warning('판정 오류 (%s): %s', pid, e)
+                continue
+        return result_map
+    except Exception as e:
+        log.warning('_run_judgment 실패, 확인 필요로 대체: %s', e)
+        return {}
 REGIONS = [('서울','서울특별시'),('인천','인천광역시'),('경기','경기도'),('부산','부산광역시'),('대구','대구광역시'),('대전','대전광역시'),('광주','광주광역시'),('울산','울산광역시'),('세종','세종특별자치시'),('강원','강원특별자치도'),('충북','충청북도'),('충남','충청남도'),('충청북','충청북도'),('충청남','충청남도'),('전북','전북특별자치도'),('전남','전라남도'),('경북','경상북도'),('경남','경상남도'),('제주','제주특별자치도')]
 IGNORE = {'서울','경기','인천','부산','대구','대전','광주','울산','세종','제주','강원','경북','경남','충북','충남','전북','전남','준비','지원','사업','신청','창업','예비창업','하려고','그리고','있어요','해주세요','합니다','부탁해','저는','제가','되어','받고','원해','하려','이제','있는','싶어요','부족해요'}
 TYPES = ('융자','보조금','보증','교육','멘토링','공간','사업화','기타')
