@@ -492,6 +492,19 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
     else:
         candidates=[(score,a) for score,a in active if score>0]
         if not candidates:candidates=active
+    # 판정 가능한 공고(conds_gold30)가 candidates에 없으면 active에서 보완해 넣는다.
+    # RAG가 conds_gold30 공고를 가져오지 못하더라도 판정이 작동하도록.
+    if _RULE_JUDGE_OK:
+        try:
+            _load_rj_data()
+            judged_pids = set(_rj_conds or {})
+            candidate_pids = {a.announcement_id for _, a in candidates}
+            missing_judged = [(s, a) for s, a in active if a.announcement_id in judged_pids and a.announcement_id not in candidate_pids]
+            if missing_judged:
+                candidates = list(candidates) + missing_judged
+                log.info('conds_gold30 공고 %d건 candidates에 보완', len(missing_judged))
+        except Exception as e:
+            log.warning('conds_gold30 보완 실패: %s', e)
     notices = _load_notices()
     # 판정 엔진 연결 준비: judgment_map은 주희님 판정 결과를 {pblancId: 판정결과} 형태로 받는다.
     # 현재는 판정 엔진이 미연결이므로 빈 dict. 연결 시 아래 _run_judgment()를 구현한다.
