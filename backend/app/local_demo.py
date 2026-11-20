@@ -345,8 +345,8 @@ def _card_summary(text):
 JUDGE_AS_OF = date(2026, 10, 16)
 
 def _is_rolling(a):
-    """상시·연중·수시로 적힌 공고만 상시 모집. 제목에 '수시'만 있고 신청기간이 날짜·문장이면 상시가 아니다."""
-    return bool(a.rolling and a.application_period_raw and re.search(r'상시\s*접수|연중|수시', a.application_period_raw))
+    """rolling=1이면 모집 중 취급. '예산 소진시까지'·'상시 접수'·'연중' 모두 포함."""
+    return bool(a.rolling)
 
 def _program(a, today):
     raw=a.raw_fields or {}
@@ -445,7 +445,9 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         if a.apply_end is not None:
             if a.apply_start and a.apply_start>today:continue
             if a.apply_end < today:continue
-        elif not (a.rolling and a.application_period_raw and re.search(r'상시\s*접수|연중|수시',a.application_period_raw)):
+        elif not a.rolling:
+            # apply_end 없고 rolling도 아니면 제외
+            # rolling=1이면 period 텍스트('예산 소진시까지', '상시 접수', '연중' 등) 무관하게 포함
             continue
         s=_score(a,terms,profile)
         active.append((s,a))
