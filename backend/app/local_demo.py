@@ -544,8 +544,10 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
           'hasConditions': has_conditions,
           'conditionTexts': condition_texts,  # 🟡일 때만 값 있음. 나애님 condition_text.py 출력
         })
-    # 🔴 자격 미달은 excluded로 분리 (프론트 res.excluded 에서 별도 표시)
+    # 🔴 자격 미달은 excluded로, 🟡 조건부는 conditional로 분리
+    # 프론트엔드: res.excluded → 해당 안 됨, res.conditional → 조건부 가능
     excluded = []
+    conditional = []
     final_results = []
     for r in results:
         if r['signal'] == '🔴':
@@ -554,14 +556,16 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
                 'title': r['program']['title'],
                 'failedReasons': r.get('conditionTexts') or [],
             })
+        elif r['signal'] == '🟡':
+            conditional.append(r)
         else:
             final_results.append(r)
 
     return {
-      'profile':profile,'missing':missing,'results':final_results,'conditional':[],'excluded':excluded,
+      'profile':profile,'missing':missing,'results':final_results,'conditional':conditional,'excluded':excluded,
       'nextSteps':[],
       'summary':{'eligibleCount':sum(1 for r in final_results if r['signal']=='🟢'),
-                 'checkCount':len(final_results),
+                 'checkCount':len(final_results) + len(conditional),
                  'conditional':{'bizStage':0,'sigungu':0},'urgent':None,'caution':None},
       'coverage':{'sources':[{'portal':'기업마당','count':len(announcements)}],
                   'total':len(announcements),'asOf':today.isoformat(),'regions':[]},
