@@ -4,10 +4,9 @@ import { Badge } from '@/components/Badge'
 import { Card } from '@/components/Card'
 import { Icon } from '@/components/Icon'
 import { cx } from '@/lib/cx'
-import { conditionalField } from '@/services/supportMatch/eligibility'
 import type { MatchResult, MatchVerdict, UserProfile } from '@/services/supportMatch/types'
 import { RuleChecklist } from './RuleChecklist'
-import { CONDITIONAL_SUBLABEL, tabOf } from './VerdictTabs'
+import { tabOf } from './VerdictTabs'
 
 const won = (m: number) =>
   m >= 10000 ? `${(m / 10000).toFixed(1).replace(/\.0$/, '')}억원` : `${m.toLocaleString()}만원`
@@ -50,7 +49,7 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const p = r.program
-  const cField = r.verdict === '조건부' ? conditionalField(r.rules, profile) : null
+  // cField 목 데이터 제거 (실데이터 conditionTexts 사용)
   // 수행기관이 있으면 수행기관을 먼저 보여준다
   const meta = [p.operator ?? p.agency, p.amountMaxManwon != null ? `1인 최대 ${won(p.amountMaxManwon)}` : null].filter(
     Boolean,
@@ -71,7 +70,6 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
       {/* 판정 헤더: 판정색 연한 배경 + 글자 라벨 */}
       <div className={cx('flex min-h-11 items-center gap-2 px-6 text-sm font-bold', VERDICT[r.verdict].head)}>
         {tabOf(r.verdict).label}
-        {cField && <span className="font-semibold">{CONDITIONAL_SUBLABEL[cField]}</span>}
         {/* 🟡 조건부: 조건 종류 태그 */}
         {r.verdict === '조건부' && r.conditionTexts && r.conditionTexts.length > 0 && (
           <div className="flex flex-wrap gap-1 ml-1">
