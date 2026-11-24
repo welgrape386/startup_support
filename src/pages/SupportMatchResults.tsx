@@ -339,7 +339,7 @@ export function SupportMatchResults() {
                               {matchItems.length === 0 ? (
                                 <p className="text-sm text-muted">이 카테고리에 해당하는 공고가 없어요. 다른 카테고리를 확인해보세요.</p>
                               ) : (
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
                                   {matchItems.map((r) => (
                                     <MatchCard key={r.program.id} result={r} profile={res.profile} />
                                   ))}
