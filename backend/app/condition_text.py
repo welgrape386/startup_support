@@ -63,7 +63,7 @@ def _clip(text, n=60):
 
 def _unknown(name, part):
     # 템플릿 없을 때 -> "{조건} 확인 필요 (원문 앞부분)"
-    why = _short(part.get("근거")) if isinstance(part, dict) else ""
+    why = _short(part.get("근거")) if isinstance(part, dict) and name != "업력" else ""   # 업력 원문은 어색해서 안 붙임
     return f"{LABEL.get(name, name)} 확인 필요" + (f" ({why})" if why else "")
 
 
@@ -73,7 +73,7 @@ def _region(p, stage):
     kinds = set(p.get("유형") or [])
     if not gu:
         return None
-    if stage == "예비" and kinds & BIZ_PLACE:
+    if stage in ("예비", "예비창업") and kinds & BIZ_PLACE:
         return f"{gu}에서 창업하면 신청 가능"
     if kinds & {"거주지", "주민등록지"}:
         return f"{gu} 거주 조건 확인 필요"
@@ -81,7 +81,8 @@ def _region(p, stage):
 
 
 def _biz(p, stage):
-    return "선정 후 사업자등록 필요" if p.get("값") == "사후등록" else None
+    # 사업자등록 노란불은 선정 후 등록하면 되는 경우뿐 (JSON 값이 "불가"여도 판정이 노란불 줌)
+    return "선정 후 사업자등록 필요"
 
 
 def _career(p, stage):
@@ -180,7 +181,7 @@ def _choice(c):
                 parts.append(str(v["종류"]).replace("확인", ""))   # 벤처기업확인 -> 벤처기업
         elif k == "업력":
             lo, hi = v.get("min_개월"), v.get("max_개월")
-            parts.append(f"업력 {_months(lo)} 이상" if lo else (f"업력 {_months(hi)} 이내" if hi else None))
+            parts.append(f"업력 {_months(lo)} 이상" if lo else (f"업력 {_months(hi)} 이내" if hi else "업력 기준 이내"))   # 기간 안 적힌 것도 선택지로 남김
         elif k == "나이":
             lo, hi = v.get("min"), v.get("max")
             parts.append(f"만 {hi}세 이하" if hi else (f"만 {lo}세 이상" if lo else None))
@@ -248,6 +249,8 @@ def make_condition_text(notice, conds, stage="", picked=None, industry_reason=No
                 text = _picked(name, part, picked[name])
             if not text and name in RULES:
                 text = RULES[name](part, stage)
+        elif mark == Q and name == "대안조건" and alt_left:   # 판정은 대안조건을 ❔로 줌
+            text = _alternative_left(part, alt_left)
         elif mark == Q and name in Q_RULES:
             text = Q_RULES[name](part, stage)
         out.append(text or _unknown(name, part))
