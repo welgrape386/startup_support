@@ -96,12 +96,19 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
         {/* 🟡 조건부 카드: [조건] 문구 (나애님 condition_text.py 출력) */}
         {r.verdict === '조건부' && r.conditionTexts && r.conditionTexts.length > 0 && (
           <ul className="flex flex-col gap-1">
-            {r.conditionTexts.map((text, i) => (
-              <li key={i} className="flex items-start gap-1.5 text-xs text-warn">
-                <span className="mt-0.5 shrink-0">•</span>
-                <span>{text}</span>
-              </li>
-            ))}
+            {r.conditionTexts.map((item, i) => {
+              const label = typeof item === 'object' ? item.label : null;
+              const text = typeof item === 'object' ? item.text : item;
+              return (
+                <li key={i} className="flex items-start gap-1.5 text-xs text-warn">
+                  <span className="mt-0.5 shrink-0">•</span>
+                  <span>
+                    {label && <span className="font-semibold mr-1">[{label}]</span>}
+                    {text}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
 

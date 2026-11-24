@@ -15,7 +15,17 @@ Y = "🟡"   # 조건 결과: 노란불 (조건부)
 Q = "❔"   # 조건 결과: 확인 필요
 
 ORDER = ["나이", "지역", "사업자등록", "업력", "업종", "신청자_유형", "성별", "특수자격", "대안조건"]
-LABEL = {"신청자_유형": "신청자 유형", "특수자격": "대상 자격", "대안조건": "대안 조건"}
+LABEL = {
+    "나이": "나이",
+    "지역": "소재지 변경",
+    "사업자등록": "사업자등록 미완",
+    "업력": "업력 미달",
+    "업종": "업종 조건부",
+    "신청자_유형": "신청자 유형",
+    "성별": "성별",
+    "특수자격": "대상 자격",
+    "대안조건": "대안조건",
+}
 BIZ_PLACE = {"사업장소재지", "사업자등록지", "본사소재지"}
 CAREER_BASE = {"개업일": "개업일", "법인설립등기일": "법인 설립일"}
 
@@ -253,7 +263,7 @@ def make_condition_text(notice, conds, stage="", picked=None, industry_reason=No
             text = _alternative_left(part, alt_left)
         elif mark == Q and name in Q_RULES:
             text = Q_RULES[name](part, stage)
-        out.append(text or _unknown(name, part))
+        out.append({"label": LABEL.get(name, name), "text": text or _unknown(name, part)})
     return out
 
 

@@ -164,7 +164,7 @@ export type MatchResult = {
   exceptions: ExceptionClause[]
   daysLeft: number | null
   /** 🟡(조건부) 공고에 붙는 [조건] 문구 목록. 나애님 condition_text.py 출력 */
-  conditionTexts?: string[]
+  conditionTexts?: (string | { label: string; text: string })[]
   /** 조건 JSON이 추출된 공고 여부 (뱃지 표시용) */
   hasConditions?: boolean
   /** 검색 순위 (RAG 결과, 없으면 null) */

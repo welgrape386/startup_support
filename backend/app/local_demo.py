@@ -68,9 +68,9 @@ def _load_rj_data():
     global _rj_conds, _rj_dates, _rj_dic
     if _rj_conds is None:
         try:
-            _rj_conds = _rj.load_conds(str(_CONDS_FOLDER)) if _CONDS_FOLDER.exists() else {}
+            _rj_conds = _load_notices()  # service_v4 62건 (conds_gold30 대신)
         except Exception as e:
-            log.warning('conds_gold30 로드 실패: %s', e)
+            log.warning('service_v4 조건 JSON 로드 실패: %s', e)
             _rj_conds = {}
     if _rj_dates is None:
         try:
@@ -165,7 +165,39 @@ def _profile_to_u(profile: dict) -> dict:
     return u
 
 
-def _run_judgment(profile: dict, announcements: list, notices: dict) -> dict:
+def _profile_to_u_from_extracted(extracted: dict) -> dict | None:
+    """AI 추출 결과(extracted)가 있을 때 판정용 u dict를 직접 만든다.
+    없거나 실패하면 None 반환 → _profile_to_u(profile) fallback 사용."""
+    try:
+        ex = extracted.get('추가추출값') or {}
+        sd = extracted.get('검색정보') or {}
+        rag = extracted.get('_rag') or {}
+        stage_raw = ex.get('창업단계_언급') or ''
+        stage = '예비창업' if stage_raw == '예비' else ('초기창업' if stage_raw == '개업' else None)
+        sido = sd.get('검색시도') or rag.get('sido') or None
+        sigungu = sd.get('검색지역') or rag.get('user_gu') or None
+        loc = {'시도': sido, '시군구': sigungu} if sido else None
+        age = ex.get('나이_언급')
+        ind_cat = ex.get('업종_카테고리') or sd.get('업종_카테고리') or None
+        업종 = [ind_cat] if ind_cat else None
+        return {
+            '만나이': age,
+            '거주지': loc,
+            '창업단계': stage,
+            '업력_개월': None,
+            '창업예정지': loc if stage == '예비창업' else None,
+            '사업장소재지': loc if stage == '초기창업' else None,
+            '업종': 업종,
+            'industry': sd.get('업종원문표현'),
+            '사업자_형태': None,
+            '성별': '여성' if ex.get('성별') == '여성' else None,
+            '특수자격': None,
+        }
+    except Exception:
+        return None
+
+
+def _run_judgment(profile: dict, announcements: list, notices: dict, extracted: dict | None = None) -> dict:
     """판정 엔진(주희님 rule_judge.py) 호출 → {pblancId: {signal, condition_texts}} 반환.
 
     - conds_gold30/ 에 조건 JSON이 있는 공고만 판정한다.
@@ -175,7 +207,12 @@ def _run_judgment(profile: dict, announcements: list, notices: dict) -> dict:
         return {}
     try:
         _load_rj_data()
-        u = _profile_to_u(profile)
+        # AI 추출 결과가 있으면 더 정확한 판정용 프로필 사용
+        u = None
+        if extracted is not None:
+            u = _profile_to_u_from_extracted(extracted)
+        if u is None:
+            u = _profile_to_u(profile)
         result_map = {}
         for a in announcements:
             pid = a.announcement_id
@@ -195,10 +232,21 @@ def _run_judgment(profile: dict, announcements: list, notices: dict) -> dict:
                 # 업종 추가 정보
                 if '업종' in res:
                     ind_v = res['업종'][0]
+                    ind_detail = res['업종'][2] if len(res['업종']) > 2 else {}
                     if ind_v == _rj.COND:
                         raw['industry_reason'] = '허용불일치'
                     elif ind_v == _rj.NO:
                         raw['industry_reason'] = '제외'
+                    if isinstance(ind_detail, dict):
+                        if ind_detail.get('industry_reason'):
+                            raw['industry_reason'] = ind_detail['industry_reason']
+                        if ind_detail.get('industry_hit'):
+                            raw['industry_hit'] = ind_detail['industry_hit']
+                # 대안조건 alt_left
+                if '대안조건' in res:
+                    alt_detail = res['대안조건'][2] if len(res['대안조건']) > 2 else {}
+                    if isinstance(alt_detail, dict) and alt_detail.get('alt_left') is not None:
+                        raw['alt_left'] = alt_detail['alt_left']
                 result_map[pid] = from_judgment(raw, notices)
             except Exception as e:
                 log.warning('판정 오류 (%s): %s', pid, e)
@@ -527,7 +575,7 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
     notices = _load_notices()
     # 판정 엔진 연결 준비: judgment_map은 주희님 판정 결과를 {pblancId: 판정결과} 형태로 받는다.
     # 현재는 판정 엔진이 미연결이므로 빈 dict. 연결 시 아래 _run_judgment()를 구현한다.
-    judgment_map = _run_judgment(profile, [a for _,a in candidates[:limit]], notices)
+    judgment_map = _run_judgment(profile, [a for _,a in candidates[:limit]], notices, extracted=extracted)
     results=[]
     for score,a in candidates[:limit]:
         program=_program(a,today)
