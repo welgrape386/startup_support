@@ -6,7 +6,7 @@
 # -> ["서대문구에서 창업하면 신청 가능", "개업일 2025년 7월 1일 이전 확인 필요"]
 #
 # 판정 결과 그대로 넣을 땐 from_judgment (맨 아래)
-# -> {"pblancId", "signal", "condition_texts"} 백엔드로 넘길 값
+# -> {"pblancId", "signal", "condition_texts": [{"label", "text"}]} 백엔드로 넘길 값
 
 import json
 import re
@@ -15,17 +15,10 @@ Y = "🟡"   # 조건 결과: 노란불 (조건부)
 Q = "❔"   # 조건 결과: 확인 필요
 
 ORDER = ["나이", "지역", "사업자등록", "업력", "업종", "신청자_유형", "성별", "특수자격", "대안조건"]
-LABEL = {
-    "나이": "나이",
-    "지역": "소재지 변경",
-    "사업자등록": "사업자등록 미완",
-    "업력": "업력 미달",
-    "업종": "업종 조건부",
-    "신청자_유형": "신청자 유형",
-    "성별": "성별",
-    "특수자격": "대상 자격",
-    "대안조건": "대안조건",
-}
+LABEL = {"신청자_유형": "신청자 유형", "특수자격": "대상 자격", "대안조건": "대안 조건"}
+# 카드 위 태그 (민선님 화면 이름)
+TAG = {"나이": "나이", "지역": "소재지 변경", "사업자등록": "사업자등록 미완", "업력": "업력 미달", "업종": "업종 조건부",
+       "신청자_유형": "신청자 유형", "성별": "성별", "특수자격": "대상 자격", "대안조건": "대안조건"}
 BIZ_PLACE = {"사업장소재지", "사업자등록지", "본사소재지"}
 CAREER_BASE = {"개업일": "개업일", "법인설립등기일": "법인 설립일"}
 
@@ -52,6 +45,14 @@ def _ro(word):
         return "로"
     jong = (ord(c) - 0xAC00) % 28
     return "으로" if jong and jong != 8 else "로"
+
+
+def _eun(word):
+    # 받침 있으면 "은", 없으면 "는"
+    c = word[-1]
+    if not "가" <= c <= "힣":
+        return "은"
+    return "은" if (ord(c) - 0xAC00) % 28 else "는"
 
 
 def _months(m):
@@ -236,10 +237,12 @@ def _with_track(notice, track):
     return notice
 
 
-def make_condition_text(notice, conds, stage="", picked=None, industry_reason=None, alt_left=None, track=None):
+def make_condition_text(notice, conds, stage="", picked=None, industry_reason=None, alt_left=None, track=None,
+                        user_industry=None):
     # notice: 예은님 조건 JSON 한 공고 / conds: {조건 이름: Y 또는 Q} / stage: 예비, 개업
     # 아래는 있으면 사용자 맞춤으로 짧게, 없으면 공고에 적힌 거 다 씀
     # picked: {"업종": [...]} / industry_reason: 허용불일치, 제외 / alt_left: 남은 선택지 번호 / track: 트랙 이름
+    # user_industry: 사용자 업종 [...] (허용불일치 때 "OO은 해당 안 됨" 붙임)
     picked = picked or {}
     notice = _with_track(notice, track)
     out = []
@@ -253,6 +256,9 @@ def make_condition_text(notice, conds, stage="", picked=None, industry_reason=No
             elif name == "업종" and industry_reason == "허용불일치":
                 allow = picked.get("업종") or (part.get("업종명") or {}).get("허용") or []
                 text = _industry({"업종명": {"허용": allow}}, stage) if allow else None
+                mine = _few(user_industry or [], 2)
+                if text and mine:
+                    text = f"{mine}{_eun(mine)} 해당 안 됨 · {text}"
             elif name == "대안조건" and alt_left:
                 text = _alternative_left(part, alt_left)
             elif name in picked:
@@ -263,7 +269,7 @@ def make_condition_text(notice, conds, stage="", picked=None, industry_reason=No
             text = _alternative_left(part, alt_left)
         elif mark == Q and name in Q_RULES:
             text = Q_RULES[name](part, stage)
-        out.append({"label": LABEL.get(name, name), "text": text or _unknown(name, part)})
+        out.append(text or _unknown(name, part))
     return out
 
 
@@ -278,6 +284,7 @@ FIELDS = {
     "industry_reason": "industry_reason",  # 허용불일치 / 제외
     "industry_hit":    "industry_hit",     # 걸린 제외 업종
     "alt_left":        "alt_left",         # 남은 대안조건 선택지 번호
+    "user_industry":   "user_industry",    # 사용자 업종 [...] (백엔드가 넣어줌)
 }
 COND_NAMES = {}   # 판정 쪽 조건 이름이 예은님 JSON이랑 다르면 여기 (예: {"신청자유형": "신청자_유형"})
 Y_WORDS = (Y, "조건부")   # 기호 대신 글자로 와도 알아봄
@@ -309,7 +316,10 @@ def from_judgment(result, notices, fields=None):
         elif _has(v, Q_WORDS):
             conds[COND_NAMES.get(name, name)] = Q
     hit = get("industry_hit")
-    out["condition_texts"] = make_condition_text(
+    names = sorted(conds, key=lambda k: ORDER.index(k) if k in ORDER else len(ORDER))   # make_condition_text랑 같은 순서
+    texts = make_condition_text(
         notices[pid], conds, get("stage") or "", picked={"업종": hit} if hit else None,
-        industry_reason=get("industry_reason"), alt_left=get("alt_left"), track=get("track"))
+        industry_reason=get("industry_reason"), alt_left=get("alt_left"), track=get("track"),
+        user_industry=get("user_industry"))
+    out["condition_texts"] = [{"label": TAG.get(n, n), "text": t} for n, t in zip(names, texts)]   # 태그 + 문구
     return out

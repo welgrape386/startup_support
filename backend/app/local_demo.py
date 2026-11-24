@@ -247,6 +247,9 @@ def _run_judgment(profile: dict, announcements: list, notices: dict, extracted: 
                     alt_detail = res['대안조건'][2] if len(res['대안조건']) > 2 else {}
                     if isinstance(alt_detail, dict) and alt_detail.get('alt_left') is not None:
                         raw['alt_left'] = alt_detail['alt_left']
+                # user_industry: 사용자 업종 (허용불일치 때 "OO은 해당 안 됨" 문구용)
+                if u.get('업종'):
+                    raw['user_industry'] = u['업종']
                 jmt_out = from_judgment(raw, notices)
                 # judgment_results: 조건별 판정 신호 {"사업자등록": "✅", "지역": "🟡", ...}
                 # rule_judge 반환 res: {조건명: (신호이모지, ...)} → 첫 번째 요소만 추출
