@@ -170,7 +170,7 @@ def _age(p, stage):
 
 RULES = {"지역": _region, "사업자등록": _biz, "업력": _career, "업종": _industry,
          "신청자_유형": _applicant, "성별": _gender, "특수자격": _special, "대안조건": _alternative, "나이": _age}
-Q_RULES = {"업력": _career}   # 확인필요여도 템플릿 쓰는 조건
+Q_RULES = {"업력": _career, "업종": _industry}   # 확인필요여도 템플릿 쓰는 조건
 
 
 # 사용자 맞춤 문구 -----------------------------------------------------------
