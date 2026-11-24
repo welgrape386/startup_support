@@ -30,7 +30,7 @@ const LABEL_KO: Record<string, string> = {
   '대안조건': '대안조건',
 }
 
-export function ConditionChecklist({ signal, conditionTexts, results }: Props) {
+export function ConditionChecklist({ signal: _signal, conditionTexts, results }: Props) {
   // results가 있으면 전체 조건 표시, 없으면 conditionTexts만 표시
   const rows: { label: string; text: string; mark: string }[] = []
 

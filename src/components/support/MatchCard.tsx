@@ -45,7 +45,7 @@ export function VerdictBadge({ verdict }: { verdict: MatchVerdict }) {
   )
 }
 
-export function MatchCard({ result: r, profile }: { result: MatchResult; profile: UserProfile }) {
+export function MatchCard({ result: r, profile: _profile }: { result: MatchResult; profile: UserProfile }) {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const p = r.program
@@ -173,7 +173,7 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
 
         {open && (
           <ConditionChecklist
-            signal={r.signal}
+            signal={r.signal ?? ''}
             conditionTexts={r.conditionTexts}
             results={r.judgmentResults}
           />
