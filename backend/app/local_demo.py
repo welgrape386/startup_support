@@ -247,7 +247,14 @@ def _run_judgment(profile: dict, announcements: list, notices: dict, extracted: 
                     alt_detail = res['대안조건'][2] if len(res['대안조건']) > 2 else {}
                     if isinstance(alt_detail, dict) and alt_detail.get('alt_left') is not None:
                         raw['alt_left'] = alt_detail['alt_left']
-                result_map[pid] = from_judgment(raw, notices)
+                jmt_out = from_judgment(raw, notices)
+                # judgment_results: 조건별 판정 신호 {"사업자등록": "✅", "지역": "🟡", ...}
+                # rule_judge 반환 res: {조건명: (신호이모지, ...)} → 첫 번째 요소만 추출
+                SIGNAL_MAP = {_rj.OK: '✅', _rj.COND: '🟡', _rj.UNK: '❔', _rj.NO: '❌'}
+                jmt_out['judgment_results'] = {
+                    k: SIGNAL_MAP.get(v[0], v[0]) for k, v in (res or {}).items()
+                }
+                result_map[pid] = jmt_out
             except Exception as e:
                 log.warning('판정 오류 (%s): %s', pid, e)
                 continue
@@ -592,6 +599,8 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
             # 프론트엔드 MatchVerdict 타입에 맞춰 반환 (types.ts)
             verdict = {'🟢': '자격 충족', '🟡': '조건부', '🔴': '자격 미달', '⚪': '확인 필요'}.get(signal, '확인 필요')
             condition_texts = jmt.get('condition_texts', [])
+            # judgmentResults: 조건별 판정 신호 {조건명: "✅"|"🟡"|"❔"|"❌"} - 나애님 judge_p1_gold_v2_detail.json 형식
+            judgment_results = jmt.get('judgment_results', {})
             headline = {
                 '🟢': '신청 가능 · 확인된 자격조건 충족',
                 '🟡': '조건부 가능 · 아래 조건을 확인하세요',
@@ -602,6 +611,7 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
             signal = '⚪'
             verdict = '확인 필요'
             condition_texts = []
+            judgment_results = {}
             headline = '관련 공고 검색됨 · 신청자격 확인 필요'
         results.append({
           'program':program,'verdict':verdict,'signal':signal,'score':percent,
@@ -610,6 +620,7 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
           'reasons':[],'cautions':[], 'exceptions':[], 'daysLeft':days,
           'hasConditions': has_conditions,
           'conditionTexts': condition_texts,  # 🟡일 때만 값 있음. 나애님 condition_text.py 출력
+          'judgmentResults': judgment_results,  # 조건별 판정 신호 {조건명: "✅"|"🟡"|"❔"|"❌"}
         })
     # 🔴 자격 미달은 excluded로, 🟡 조건부는 conditional로 분리
     # 프론트엔드: res.excluded → 해당 안 됨, res.conditional → 조건부 가능

@@ -5,7 +5,7 @@ import { Card } from '@/components/Card'
 import { Icon } from '@/components/Icon'
 import { cx } from '@/lib/cx'
 import type { MatchResult, MatchVerdict, UserProfile } from '@/services/supportMatch/types'
-import { RuleChecklist } from './RuleChecklist'
+import { ConditionChecklist } from './ConditionChecklist'
 import { tabOf } from './VerdictTabs'
 
 const won = (m: number) =>
@@ -126,7 +126,11 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
         </div>
 
         {open && (
-          <RuleChecklist rules={r.rules} />
+          <ConditionChecklist
+            signal={r.signal}
+            conditionTexts={r.conditionTexts}
+            results={r.judgmentResults}
+          />
         )}
       </div>
     </Card>
