@@ -108,7 +108,7 @@ export function MatchCard({ result: r, profile: _profile }: { result: MatchResul
               const text = typeof item === 'object' ? item.text : item
               if (!text) return null
               return (
-                <li key={i} className="flex items-start gap-1.5 text-[13px] text-ink-soft">
+                <li key={i} className="flex items-start gap-1.5 text-[13px] text-warn">
                   <span className="mt-0.5 shrink-0">·</span>
                   <span>{text}</span>
                 </li>
