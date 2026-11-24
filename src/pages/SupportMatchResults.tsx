@@ -328,7 +328,15 @@ export function SupportMatchResults() {
                         {/* 오른쪽 패널: 카드 그리드 */}
                         <div className="signal-group__panel">
                           {isRed ? (
-                            <ExcludedList items={res.excluded} />
+                            <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                              {res.excluded.map((x) =>
+                                x.result ? (
+                                  <MatchCard key={x.programId} result={x.result} profile={res.profile} />
+                                ) : (
+                                  <ExcludedList key={x.programId} items={[x]} />
+                                )
+                              )}
+                            </div>
                           ) : (
                             <>
                               {signal === 'unknown' && ageUnknownCount > 0 && (
