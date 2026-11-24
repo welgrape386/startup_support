@@ -179,7 +179,7 @@ export type SupportMatchResponse = {
   results: MatchResult[]
   /** 조건부 공고. "한 걸음만 더" 영역에만 표시하고 추천으로 세지 않는다 */
   conditional: MatchResult[]
-  excluded: { programId: string; title: string; failedReasons: string[] }[]
+  excluded: { programId: string; title: string; failedReasons: string[]; url?: string }[]
   nextSteps: NextStep[]
   /** 결과 상단 요약 (명세 6-D). 숫자·날짜·quote 는 전부 판정 결과에서 계산한다 */
   summary: MatchSummary
