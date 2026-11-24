@@ -104,12 +104,20 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
         {/* 🟡 조건부: 조건 텍스트 목록 */}
         {r.verdict === '조건부' && r.conditionTexts && r.conditionTexts.length > 0 && (
           <ul className="flex flex-col gap-1">
-            {r.conditionTexts.map((item, i) => (
-              <li key={i} className="flex items-start gap-1.5 text-[13px] text-warn">
-                <span className="mt-0.5 shrink-0">·</span>
-                <span>{typeof item === 'object' ? item.text : item}</span>
-              </li>
-            ))}
+            {r.conditionTexts.map((item, i) => {
+              const label = typeof item === 'object' ? item.label : null
+              const text = typeof item === 'object' ? item.text : item
+              return (
+                <li key={i} className="flex items-start gap-1.5 text-[13px] text-warn">
+                  <span className="mt-0.5 shrink-0">·</span>
+                  <span>
+                    {label && <span className="font-semibold">{label}</span>}
+                    {label && text && <span className="text-ink-soft font-normal"> — {text}</span>}
+                    {!label && text}
+                  </span>
+                </li>
+              )
+            })}
           </ul>
         )}
 
