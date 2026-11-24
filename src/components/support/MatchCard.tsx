@@ -101,51 +101,21 @@ export function MatchCard({ result: r, profile: _profile }: { result: MatchResul
         {/* 3줄까지만 보이고 넘치면 … 으로 줄인다. 3줄 안에 끝나는 요약은 전부 보인다 */}
         {p.summary && <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-ink-soft">{p.summary}</p>}
 
-        {/* 🟡 조건부: 조건 텍스트 목록. conditionTexts 우선, 없으면 judgmentResults로 fallback */}
-        {r.verdict === '조건부' && (() => {
-          // conditionTexts({label,text}) 가 있으면 그걸 쓴다
-          const hasCondTexts = r.conditionTexts && r.conditionTexts.length > 0
-          // judgmentResults({조건명: 신호}) fallback
-          const jrEntries = r.judgmentResults ? Object.entries(r.judgmentResults) : []
-
-          if (hasCondTexts) {
-            return (
-              <ul className="flex flex-col gap-1">
-                {r.conditionTexts!.map((item, i) => {
-                  const label = typeof item === 'object' ? item.label : null
-                  const text = typeof item === 'object' ? item.text : item
-                  return (
-                    <li key={i} className="flex items-start gap-1.5 text-[13px] text-warn">
-                      <span className="mt-0.5 shrink-0">·</span>
-                      <span>
-                        {label && <span className="font-semibold">{label}</span>}
-                        {label && text && <span className="text-ink-soft font-normal"> — {text}</span>}
-                        {!label && text}
-                      </span>
-                    </li>
-                  )
-                })}
-              </ul>
-            )
-          }
-          if (jrEntries.length > 0) {
-            const SYM: Record<string, string> = { '✅': '충족', '🟡': '조건부', '❔': '확인 필요', '❌': '미충족' }
-            return (
-              <ul className="flex flex-col gap-1">
-                {jrEntries.map(([name, sig], i) => (
-                  <li key={i} className="flex items-start gap-1.5 text-[13px] text-warn">
-                    <span className="mt-0.5 shrink-0">·</span>
-                    <span>
-                      <span className="font-semibold">{name}</span>
-                      <span className="text-ink-soft font-normal"> — {SYM[sig] ?? sig}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )
-          }
-          return null
-        })()}
+        {/* 🟡 조건부: 조건 텍스트 목록 */}
+        {r.verdict === '조건부' && r.conditionTexts && r.conditionTexts.length > 0 && (
+          <ul className="flex flex-col gap-1">
+            {r.conditionTexts.map((item, i) => {
+              const text = typeof item === 'object' ? item.text : item
+              if (!text) return null
+              return (
+                <li key={i} className="flex items-start gap-1.5 text-[13px] text-ink-soft">
+                  <span className="mt-0.5 shrink-0">·</span>
+                  <span>{text}</span>
+                </li>
+              )
+            })}
+          </ul>
+        )}
 
 
         {/* 링크는 카드 맨 아래에 붙여 같은 줄 카드끼리 위치를 맞춘다 */}
