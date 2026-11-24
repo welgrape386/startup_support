@@ -1,6 +1,13 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { cx } from '@/lib/cx'
 import { Container } from './Container'
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => { window.scrollTo(0, 0) }, [pathname])
+  return null
+}
 
 const NAV = [
   { to: '/', label: '홈', end: true },
@@ -10,6 +17,7 @@ const NAV = [
 export function AppLayout() {
   return (
     <div className="flex min-h-screen flex-col">
+      <ScrollToTop />
       <header className="border-b border-line bg-surface">
         <Container className="flex h-16 items-center justify-between">
           <NavLink to="/" className="text-[17px] font-extrabold tracking-tight text-ink">
