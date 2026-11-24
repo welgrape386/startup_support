@@ -72,6 +72,16 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
       <div className={cx('flex min-h-11 items-center gap-2 px-6 text-sm font-bold', VERDICT[r.verdict].head)}>
         {tabOf(r.verdict).label}
         {cField && <span className="font-semibold">{CONDITIONAL_SUBLABEL[cField]}</span>}
+        {/* 🟡 조건부: 조건 종류 태그 */}
+        {r.verdict === '조건부' && r.conditionTexts && r.conditionTexts.length > 0 && (
+          <div className="flex flex-wrap gap-1 ml-1">
+            {Array.from(new Set(r.conditionTexts.map(item => typeof item === 'object' ? item.label : null).filter(Boolean))).map((label, i) => (
+              <span key={i} className="rounded-full bg-warn/15 px-2 py-0.5 text-xs font-semibold text-warn">
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-4 p-6">
         <div className="flex flex-wrap items-center gap-2">
@@ -93,24 +103,6 @@ export function MatchCard({ result: r, profile }: { result: MatchResult; profile
         {/* 3줄까지만 보이고 넘치면 … 으로 줄인다. 3줄 안에 끝나는 요약은 전부 보인다 */}
         {p.summary && <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-ink-soft">{p.summary}</p>}
 
-        {/* 🟡 조건부 카드: [조건] 문구 (나애님 condition_text.py 출력) */}
-        {r.verdict === '조건부' && r.conditionTexts && r.conditionTexts.length > 0 && (
-          <ul className="flex flex-col gap-1">
-            {r.conditionTexts.map((item, i) => {
-              const label = typeof item === 'object' ? item.label : null;
-              const text = typeof item === 'object' ? item.text : item;
-              return (
-                <li key={i} className="flex items-start gap-1.5 text-xs text-warn">
-                  <span className="mt-0.5 shrink-0">•</span>
-                  <span>
-                    {label && <span className="font-semibold mr-1">[{label}]</span>}
-                    {text}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        )}
 
         {/* 링크는 카드 맨 아래에 붙여 같은 줄 카드끼리 위치를 맞춘다 */}
         <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2">
