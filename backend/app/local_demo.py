@@ -624,6 +624,8 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
                 'title': r['program']['title'],
                 'failedReasons': r.get('conditionTexts') or [],
                 'url': r['program'].get('url'),
+                'program': r['program'],
+                'result': r,
             })
         elif r['signal'] == '🟡':
             conditional.append(r)
