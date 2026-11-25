@@ -25,6 +25,11 @@ def _load():
     global _loaded
     if _loaded is not None:
         return _loaded
+    # RAG_DISABLED=1 이면 메모리 절약을 위해 키워드 검색으로 대체
+    if os.environ.get('RAG_DISABLED', '').strip() == '1':
+        log.info('RAG_DISABLED=1: 키워드 검색으로 대체합니다')
+        _loaded = False
+        return _loaded
     try:
         if str(RAG_DIR) not in sys.path:
             sys.path.insert(0, str(RAG_DIR))
