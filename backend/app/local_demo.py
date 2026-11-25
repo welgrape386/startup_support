@@ -226,7 +226,13 @@ def _run_judgment(profile: dict, announcements: list, notices: dict, extracted: 
             pid = a.announcement_id
             cond = _rj_conds.get(pid)
             if cond is None:
-                continue  # 조건 JSON 없음 → ⚪ fallback
+                # 조건 JSON 없음 → ⚪ 확인 필요로 result_map에 포함
+                result_map[pid] = {
+                    'pblancId': pid,
+                    'signal': '⚪',
+                    'condition_texts': [{'label': '확인 필요', 'text': '자격조건 정보가 없어 직접 확인이 필요해요.'}],
+                }
+                continue
             try:
                 sig, res, c, track, cands = _rj.judge_pair(cond, u, pid, _rj_dates, _rj_ev, _rj_dic)
                 # from_judgment 형태 맞추기
