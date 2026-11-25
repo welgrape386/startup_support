@@ -36,7 +36,7 @@ NO_TEXT_IDS = {"PBLN_000000000119754",   # 팁스(TIPS) 창업기업 지원계�
                "PBLN_000000000126188",   # 위치정보 맞춤형 컨설팅
                "PBLN_000000000126865"}   # 서리풀 소상공인 창업 클리닉
 
-# 사용자가 신청하는 공고가 아님 (예은님 조건 추출에서도 뺌, 11/16)
+# 사용자가 신청하는 공고가 아님 (조건 추출에서도 뺌, 11/16)
 NOT_APPLY_IDS = {"PBLN_000000000092578",   # 체납액 징수특례 제도 안내 (모집 공고 아님)
                  "PBLN_000000000116975",   # 넷제로 챌린지X 통합 공고 (자격이 개별 공고에)
                  "PBLN_000000000122497",   # SW개발자 채용기업 모집 (채용공고 양식뿐)
@@ -323,17 +323,7 @@ def age_mismatch(pid, age):
     a = float(age)
     return (lo is not None and a < lo) or (hi is not None and a > hi)
 
-# 원하는 지원별로 질문 뒤에 붙일 공고 쪽 단어 (make_category.py KEYWORDS에서 고름, 질문지 보고 고른 것 아님)
-NEED_HINT = {
-    "자금": "자금 융자 보증 정책자금 지원금 사업화자금",
-    "교육·컨설팅": "교육 컨설팅 멘토링 상담 코칭",
-    "공간·시설": "공간 입주 시설 장비 점포 매장",
-    "홍보·판매": "판로 홍보 마케팅 판매 라이브커머스 입점",
-    "인력": "채용 인건비 고용지원 일자리",
-    "기술개발": "R&D 기술개발 시제품 특허",
-    "해외진출": "해외 수출 글로벌",
-    "제도·인증": "인증 확인서",
-}
+# 원하는 지원별로 질문 뒤에 붙일 공고 쪽 단어 (make_category.py KEYWORDS에서 고름)
 # 넓은 말만 (카테고리 이름 수준). 융자·멘토링처럼 한 방식으로 좁히는 말은 뺌
 NEED_HINT_SHORT = {
     "자금": "자금 지원금",
@@ -357,15 +347,14 @@ class NeedBoost:
     - industry_first면 업종 매핑이 사용자 업종을 허용한 공고는 업종 단어 규칙으로 안 내림 (#34)
     """
     def __init__(self, first, scorer, n=20, bonus=0.01, special_penalty=0.0, industry_penalty=0.0, age_rule=False,
-                 need_hint=False, tech_cat=False, industry_first=False):
+                 need_hint=None, tech_cat=False, industry_first=False):
         self.first, self.scorer, self.n, self.bonus = first, scorer, n, bonus
         self.penalty = special_penalty
         self.ind_penalty = industry_penalty
         self.age_rule = age_rule
         self.tech_cat = tech_cat
         self.industry_first = industry_first
-        # 원하는 지원 단어를 질문 뒤에 붙여서 검색. True면 NEED_HINT, dict면 그 단어
-        self.need_hint = NEED_HINT if need_hint is True else (need_hint or {})
+        self.need_hint = need_hint or {}    # 원하는 지원 단어를 질문 뒤에 붙여서 검색 (NEED_HINT_SHORT)
         with open(CATEGORY, encoding="utf-8-sig") as f:
             self.cats = {r["pblancId"]: {c for c, v in r.items() if v == "1"} for r in csv.DictReader(f)}
     def search(self, query, k=10, user_gu="", stage="", need="", industry="", age="", industry_cat=""):

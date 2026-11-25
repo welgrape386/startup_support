@@ -28,7 +28,8 @@ RAG = HERE.parent
 QS = pd.read_csv(RAG / "03_평가셋_문제+답안지" / "search_questions.csv", encoding="utf-8-sig", dtype=str).fillna("")
 POOL = pd.read_excel(RAG / "03_평가셋_문제+답안지" / "pool_snap1016.xlsx", sheet_name="답안지")
 LOGFILE = HERE / "실험기록.md"
-_n = max([int(x) for x in re.findall(r"^### #(\d+)", LOGFILE.read_text(encoding="utf-8"), re.M)] or [0]) + 1
+_log = LOGFILE.read_text(encoding="utf-8") if LOGFILE.exists() else ""   # 실험기록.md는 깃에 안 올림
+_n = max([int(x) for x in re.findall(r"^### #(\d+)", _log, re.M)] or [0]) + 1
 RUN_DIR = HERE / "runs" / (f"{_n:02d}_{TAG}" if LOG else f"_test/{TAG}")
 
 label = {}

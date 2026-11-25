@@ -1,9 +1,9 @@
 """
-공고마다 업종 카테고리·나이 조건 붙이기 (예은님 조건 JSON → 우리 카테고리 9개)
+공고마다 업종 카테고리·나이 조건 붙이기 (조건 추출 JSON → 우리 카테고리 9개)
 
     python make_industry.py [조건 JSON 경로]
 
-입력: 예은님 conditions JSON (공고 목록, 업종.업종명 = 허용·제외·제외_목록·제외_예외), 업종_사전.csv
+입력: 조건 추출 JSON (공고 목록, 업종.업종명 = 허용·제외·제외_목록·제외_예외), 업종_사전.csv
 출력: industry_map.csv  공고ID·트랙 → 허용 카테고리("전체"면 제한 없음), 제외 카테고리,
                         제외_예외 카테고리 (제외인데 "단, ~은 가능" 예외 문구가 있음 → 판정 ❔, 검색은 안 씀)
                         트랙 빈칸 = 공고 전체 줄 (검색은 이 줄만), 트랙 있음 = 트랙별 줄 (판정용)
@@ -26,9 +26,6 @@ SRC = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE.parent / "00_참고자료
 
 notices = json.load(open(SRC, encoding="utf-8"))
 
-# 예은님 JSON에서 최상위로 들어갔지만 원문상 한 트랙에만 걸리는 조건이 있으면 여기에 (수정본 오면 지우기)
-# 126965 정책자금은 11/15 예은님 수정본에서 소공인특화자금 트랙으로 옮겨져서 뺌
-TRACK_ONLY = {}
 book = pd.read_csv(HERE / "업종_사전.csv", encoding="utf-8-sig", dtype=str).fillna("").set_index("업종명")
 unknown = set()
 
@@ -38,12 +35,6 @@ def cats(name, col):
         unknown.add(name)
         return set()
     return set(book.loc[name, col].split("|")) - {""}
-
-
-def names_of(part):
-    """업종 칸 → (허용 업종명, 제외 업종명). 단서 붙은 제외는 뺌"""
-    allow, deny, _ = split_names(part)
-    return allow, deny
 
 
 def split_names(part):
@@ -58,10 +49,6 @@ def split_names(part):
 out, ages = [], []
 for d in notices:
     allow, deny, hedge = split_names(d.get("업종"))
-    if TRACK_ONLY.get(d["공고ID"]) == "허용":
-        allow = []
-    elif TRACK_ONLY.get(d["공고ID"]) == "제외":
-        deny, hedge = [], []
     where = "최상위"
     tracks = [((t.get("조건") or {}).get("업종")) for t in d.get("트랙") or []]
     if not (allow or deny or hedge) and tracks and all(t is not None for t in tracks) \
@@ -97,8 +84,6 @@ def joined(names, col):
 track_rows = []
 for d in notices:
     top_a, top_d, top_h = split_names(d.get("업종"))
-    if TRACK_ONLY.get(d["공고ID"]) == "허용":
-        top_a = []
     for t in d.get("트랙") or []:
         a, x, h = split_names((t.get("조건") or {}).get("업종"))
         allow = a or top_a
