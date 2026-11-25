@@ -81,7 +81,9 @@ export function MatchCard({ result: r, profile: _profile }: { result: MatchResul
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-4 p-6">
+      <div className="flex flex-1 flex-col p-6">
+        {/* 상단 콘텐츠: 배지·제목·요약·조건 — flex-1로 늘려서 링크를 카드 맨 아래에 붙인다 */}
+        <div className="flex flex-1 flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           <DayBadge daysLeft={r.daysLeft} unknownPeriod={p.status === '기간 확인 필요'} />
           {(p.support_types ?? []).map((t) => (
@@ -118,8 +120,10 @@ export function MatchCard({ result: r, profile: _profile }: { result: MatchResul
         )}
 
 
+        </div>{/* /flex-1 콘텐츠 영역 끝 */}
+
         {/* 링크는 카드 맨 아래에 붙여 같은 줄 카드끼리 위치를 맞춘다 */}
-        <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2">
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
           <a
             href={p.url}
             target="_blank"
