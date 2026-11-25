@@ -3,7 +3,7 @@
 
     row = extract(text)                              # 제출할 때 (규칙 + LLM)
     results = search(**to_search_args(text, row))    # RAG 검색
-    judge_in = to_judge_profile(row)                 # 판정 입력 (users_v2 한국어 키)
+    judge_in = to_judge_profile(row)                 # 판정 입력 (한국어 키)
 
 - extract_quick(text) : 입력 중. 규칙만 (API 안 씀) -> 인식된 정보 / 빠진 정보
 - ASK_TEXT[값] : ask_fields 값 -> 빠진 정보 문구
@@ -56,7 +56,7 @@ def to_search_args(text, row):
     return {
         "query": text,
         "user_gu": gu,
-        "stage": "예비" if pre else "개업",
+        "stage": "예비창업" if pre else "초기창업",
         "age": row["age"] if row["age"] is not None else "",
         "need": "|".join(row["need"] or []),
         "industry_cat": "|".join(row["industry_cat"] or []),
@@ -64,14 +64,14 @@ def to_search_args(text, row):
 
 
 def to_judge_profile(row):
-    """-> 판정 입력 (users_v2 10칸 한국어 키 + industry)
-    industry는 업종이 기타 · 부분 제외일 때 판정이 원문 보는 용도"""
+    """-> 판정 입력 (한국어 키 10칸 + industry + need)
+    industry는 업종이 기타 · 부분 제외일 때 판정이 원문 보는 용도, need는 LLM 판정이 씀"""
     def place(k):
         return {"시도": row[f"{k}_sido"], "권역": None, "시군구": row[f"{k}_sigungu"]} if row[f"{k}_sido"] else None
     return {"만나이": row["age"], "거주지": place("res"), "창업단계": row["stage"], "업력_개월": row["biz_months"],
             "창업예정지": place("plan"), "사업장소재지": place("biz"), "업종": row["industry_cat"],
             "사업자_형태": row["biz_type"], "성별": row["gender"], "특수자격": row["special_quals"],
-            "industry": row["industry_raw"]}
+            "industry": row["industry_raw"], "need": row["need"]}
 
 
 if __name__ == "__main__":
