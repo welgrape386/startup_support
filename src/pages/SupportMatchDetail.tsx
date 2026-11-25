@@ -55,10 +55,6 @@ function SectionTitle({ children }: { children: string }) {
   return <h2 className="mb-4 text-[15px] font-bold text-ink">{children}</h2>
 }
 
-const fileExt = (url: string) => url.split('.').pop()?.toLowerCase() ?? ''
-const isPdf = (url: string) => fileExt(url) === 'pdf'
-const isImage = (url: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt(url))
-const isDoc = (url: string) => ['hwp', 'hwpx', 'docx', 'doc'].includes(fileExt(url))
 
 /** 제출 서류 아이템 — 체크박스 없이 텍스트 + 뱃지만 */
 function DocItem({ doc }: { doc: SubmissionDoc; checked?: boolean; onToggle?: () => void }) {
@@ -226,20 +222,6 @@ export function SupportMatchDetail() {
       .catch(() => setConditionLoaded(true))
   }, [id])
 
-  const [checked, setChecked] = useState<Record<string, boolean>>(() => {
-    try {
-      const raw = localStorage.getItem(`checklist-${id}`)
-      return raw ? JSON.parse(raw) : {}
-    } catch { return {} }
-  })
-
-  const toggleDoc = (doc: string) => {
-    setChecked((prev) => {
-      const next = { ...prev, [doc]: !prev[doc] }
-      try { localStorage.setItem(`checklist-${id}`, JSON.stringify(next)) } catch {}
-      return next
-    })
-  }
 
   if (!result || result.program.id !== id) {
     return (
@@ -260,7 +242,6 @@ export function SupportMatchDetail() {
   const infoTracks = p.infoTracks ?? []
   const hasInfoTracks = infoTracks.length > 0
   const bonusPoints = p.bonusPoints ?? []
-  const attachmentFiles = p.attachmentFiles ?? []
   const applyUrl = p.applyUrl
   const hasRounds = (p.rounds?.length ?? 0) > 0
 
