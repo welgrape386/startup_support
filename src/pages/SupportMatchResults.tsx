@@ -130,7 +130,11 @@ export function SupportMatchResults() {
       green: applyFS(res.results.filter((r) => r.verdict === '자격 충족')),
       yellow: applyFS(res.conditional),
       unknown: applyFS(res.results.filter((r) => r.verdict === '확인 필요')),
-      red: res.excluded,
+      red: categories.length === 0
+        ? res.excluded
+        : res.excluded.filter((x) =>
+            (x.program?.support_types ?? []).some((t) => categories.includes(t))
+          ),
     }
   }, [res, categories, sort])
 
@@ -328,7 +332,7 @@ export function SupportMatchResults() {
                         {/* 오른쪽 패널: 카드 그리드 */}
                         <div className="signal-group__panel">
                           {isRed ? (
-                            <ExcludedList items={res.excluded} />
+                            <ExcludedList items={groupedItems!.red} />
                           ) : (
                             <>
                               {signal === 'unknown' && ageUnknownCount > 0 && (
