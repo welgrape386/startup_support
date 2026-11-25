@@ -8,3 +8,4 @@ psycopg[binary]>=3.2,<4
 alembic>=1.13,<2
 openai>=1.95.0,<3.0.0
 python-dotenv>=1.0.0,<2.0.0
+numpy>=1.26,<3

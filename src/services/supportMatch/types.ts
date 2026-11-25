@@ -86,15 +86,15 @@ export type SupportProgram = {
   url: string
   contact?: string
   /** 신청 사이트 URL (기업마당 외 별도 신청 페이지가 있을 때) */
-  applyUrl?: string                       // TODO: API 필드
+  applyUrl?: string
   /** 제출 서류 목록. 문자열 또는 필수/선택·대상자 구분 객체 */
   submissionDocs?: SubmissionDoc[]
   /** 우대·가산점 항목 — {내용, 가점?, 근거?} 객체 배열 (info_v4) */
   bonusPoints?: { 내용: string; 가점?: string | null; 근거?: string | null }[]
   /** 첨부 파일 (공고 원문 PDF/HWP 등) */
-  attachmentFiles?: { name: string; url: string }[]  // TODO: API 필드
+  attachmentFiles?: { name: string; url: string }[]
   /** 차수형 모집 일정 */
-  rounds?: { round: string; start: string; end: string; status: '접수중' | '마감' | '예정' }[]  // TODO: API 필드
+  rounds?: { round: string; start: string; end: string; status: '접수중' | '마감' | '예정' }[]
   /** 자부담 (공고 원문 추출) */
   selfFunding?: { status: '있음' | '언급없음'; rate?: number; detail?: string }
   /** 안내정보 트랙 (자금·분야마다 금액·금리·서류가 다를 때) */

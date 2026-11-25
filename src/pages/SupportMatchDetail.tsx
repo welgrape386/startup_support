@@ -517,7 +517,7 @@ export function SupportMatchDetail() {
             <h3 className="mb-2 mt-5 text-[13px] font-semibold uppercase tracking-wide text-muted">우대·가산점</h3>
             {bonusPoints.length === 0 ? (
               <p className="text-sm text-muted">
-                우대·가산점 정보가 없어요. {/* TODO: API 필드 bonusPoints */}
+                우대·가산점 정보가 없어요.
               </p>
             ) : (
               <ul className="flex flex-col gap-2">
