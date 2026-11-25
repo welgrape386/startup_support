@@ -531,44 +531,7 @@ export function SupportMatchDetail() {
             )}
           </Card>
 
-          {/* 4.3 원문 파일 */}
-          {attachmentFiles.length > 0 && (
-            <Card>
-              <SectionTitle>공고 원문 파일</SectionTitle>
-              <div className="flex flex-col gap-5">
-                {attachmentFiles.map((file) => (
-                  <div key={file.url} className="flex flex-col gap-2">
-                    <p className="text-sm font-semibold text-ink">{file.name}</p>
-                    {isPdf(file.url) ? (
-                      <>
-                        <iframe
-                          src={file.url}
-                          title={file.name}
-                          className="w-full rounded-panel border border-line"
-                          style={{ height: 640 }}
-                        />
-                        <div className="flex gap-4 text-sm">
-                          <a href={file.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary-600">새 탭에서 열기</a>
-                          <a href={file.url} download className="font-semibold text-muted">다운로드</a>
-                        </div>
-                      </>
-                    ) : isImage(file.url) ? (
-                      <>
-                        <img src={file.url} alt={file.name} className="max-h-48 w-auto rounded-panel border border-line object-contain" />
-                        <a href={file.url} download className={buttonClasses('secondary', 'md')}>다운로드</a>
-                      </>
-                    ) : isDoc(file.url) ? (
-                      <a href={file.url} download className={buttonClasses('secondary', 'md')}>
-                        다운로드 ({fileExt(file.url).toUpperCase()})
-                      </a>
-                    ) : (
-                      <a href={file.url} target="_blank" rel="noopener noreferrer" className={buttonClasses('secondary', 'md')}>열기</a>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+          {/* 4.3 원문 파일 — 표시 제거 */}
         </div>
 
         {/* ── 오른쪽 sticky 요약 카드 ── */}
