@@ -67,6 +67,7 @@ def to_legacy(row: dict) -> dict:
             "resSido": row.get("res_sido"),
             "resSigungu": row.get("res_sigungu"),
             "bizSigungu": biz_sigungu,  # 예비창업=plan_sigungu, 초기창업=biz_sigungu
+            "bizMonths": row.get("biz_months"),  # 업력 개월수 → experienceMonths
         },
         # local_demo.py의 RAG 검색 인자용 (sx dict)
         "_rag": {

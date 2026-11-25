@@ -348,7 +348,9 @@ def get_profile(text: str, overrides: dict | None):
        'industryCategory':_extracted(override('industryCategory',category)),
        'industryText':_extracted(None),'targetGroups':groups,'needs':needs,
        'fundingGapManwon':_extracted(fund),'budgetManwon':_extracted(None),
-       'experienceYears':_extracted(None),'freeText':text
+       'experienceYears':_extracted(None),
+       'experienceMonths':_extracted(override('experienceMonths', None)),  # AI 추출 시 채워짐
+       'freeText':text
     }
     missing=[k for k in ('age','sido','bizStage','industryCategory') if profile[k]['value'] is None]
     return profile,missing
@@ -508,6 +510,8 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
         # 거주지 구 → 프론트 프로필 칩 sigungu 필드 (사업장 구와 별도)
         res_sigungu = profile_extra.get('resSigungu')
         put('sigungu', res_sigungu or search.get('검색지역'))
+        # 업력 개월수 → 프론트 프로필 칩 experienceMonths 필드
+        put('experienceMonths', profile_extra.get('bizMonths'))
         # AI 추출 결과에 업종 카테고리가 있으면 채움 (규칙 추출 fallback 보완)
         ai_ind_cat = extra.get('업종_카테고리') or search.get('업종_카테고리')
         if ai_ind_cat and profile.get('industryCategory', {}).get('value') is None:
