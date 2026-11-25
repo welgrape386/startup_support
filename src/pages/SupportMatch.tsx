@@ -228,7 +228,7 @@ export function SupportMatch() {
         <div className="flex flex-col gap-1.5 rounded-panel border border-primary-100 bg-surface px-4 py-3">
           <span className="text-[12px] font-bold text-muted">추가하면 좋은 것들</span>
           <p className="text-[13px] leading-relaxed text-ink">
-            필요한 지원 종류 <span className="text-muted">(자금·교육·공간·홍보·인력 등)</span>, 신청자 유형 <span className="text-muted">(개인/법인)</span>, 성별 — 해당 조건이 있는 공고에서 더 정확한 판정이 가능해요.
+            필요한 지원 종류 <span className="text-muted">(자금·교육·공간·홍보·인력 등)</span>, 신청자 유형 <span className="text-muted">(개인/법인)</span>, 성별도 적으면 더 정확한 공고를 찾을 수 있어요.
           </p>
         </div>
         <div className="flex flex-col gap-1.5 rounded-panel border border-primary-100 bg-surface px-4 py-3">

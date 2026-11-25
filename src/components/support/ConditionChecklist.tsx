@@ -44,10 +44,12 @@ export function ConditionChecklist({ signal: _signal, conditionTexts, results }:
       rows.push({ label: LABEL_KO[name] || name, text, mark })
     }
   } else if (conditionTexts && conditionTexts.length > 0) {
+    // signal이 ⚪이면 확인 필요, 🟡이면 조건부로 표시
+    const defaultMark = _signal === '⚪' ? '❔' : '🟡'
     for (const item of conditionTexts) {
       const label = typeof item === 'object' ? item.label : '조건'
       const text = typeof item === 'object' ? item.text : item
-      rows.push({ label, text, mark: '🟡' })
+      rows.push({ label, text, mark: defaultMark })
     }
   }
 
