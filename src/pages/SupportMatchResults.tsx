@@ -132,7 +132,7 @@ export function SupportMatchResults() {
       red: categories.length === 0
         ? res.excluded
         : res.excluded.filter((x) =>
-            (x.program?.support_types ?? []).some((t) => categories.includes(t))
+            (x.result?.program.support_types ?? []).some((t) => categories.includes(t))
           ),
     }
   }, [res, categories, sort])

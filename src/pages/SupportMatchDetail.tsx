@@ -60,34 +60,21 @@ const isPdf = (url: string) => fileExt(url) === 'pdf'
 const isImage = (url: string) => ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(fileExt(url))
 const isDoc = (url: string) => ['hwp', 'hwpx', 'docx', 'doc'].includes(fileExt(url))
 
-/** 제출 서류 체크리스트 아이템 */
-function DocItem({ doc, checked, onToggle }: { doc: SubmissionDoc; checked: boolean; onToggle: () => void }) {
-  const id = `doc-${doc.text}`
+/** 제출 서류 아이템 — 체크박스 없이 텍스트 + 뱃지만 */
+function DocItem({ doc }: { doc: SubmissionDoc; checked?: boolean; onToggle?: () => void }) {
   return (
-    <li className="flex items-start gap-2">
-      <input
-        type="checkbox"
-        id={id}
-        checked={checked}
-        onChange={onToggle}
-        className="mt-0.5 h-4 w-4 shrink-0 accent-primary-600"
-      />
-      <label htmlFor={id} className="cursor-pointer flex flex-col gap-0.5" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
+    <li className="flex items-start gap-2" style={{ wordBreak: 'keep-all', lineHeight: '1.6' }}>
+      {/* 필수/선택 뱃지를 텍스트 왼쪽에 */}
+      {doc.required === true && (
+        <span className="mt-0.5 inline-flex shrink-0 items-center rounded-sm bg-warn-soft px-1.5 py-0 text-[11px] font-semibold text-warn">필수</span>
+      )}
+      {doc.required === false && (
+        <span className="mt-0.5 inline-flex shrink-0 items-center rounded-sm bg-bg-soft px-1.5 py-0 text-[11px] font-semibold text-muted">선택</span>
+      )}
+      <span className="flex flex-col gap-0.5">
         <span className="text-sm text-ink">{doc.text}</span>
-        {(doc.required !== undefined || doc.target) && (
-          <span className="flex flex-wrap gap-1">
-            {doc.required === true && (
-              <span className="inline-flex items-center rounded-sm bg-warn-soft px-1.5 py-0 text-[11px] font-semibold text-warn">필수</span>
-            )}
-            {doc.required === false && (
-              <span className="inline-flex items-center rounded-sm bg-bg-soft px-1.5 py-0 text-[11px] font-semibold text-muted">선택</span>
-            )}
-            {doc.target && (
-              <span className="text-[11px] text-muted">{doc.target}</span>
-            )}
-          </span>
-        )}
-      </label>
+        {doc.target && <span className="text-[11px] text-muted">{doc.target}</span>}
+      </span>
     </li>
   )
 }
@@ -96,14 +83,10 @@ function DocItem({ doc, checked, onToggle }: { doc: SubmissionDoc; checked: bool
 function TrackTabs({
   tracks,
   topDocs,
-  checked,
-  onToggle,
   won,
 }: {
   tracks: InfoTrack[]
   topDocs: SubmissionDoc[]
-  checked: Record<string, boolean>
-  onToggle: (key: string) => void
   won: (m: number) => string
 }) {
   const [activeIdx, setActiveIdx] = useState(0)
@@ -150,10 +133,10 @@ function TrackTabs({
             <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted">제출 서류</p>
             <ul className="flex flex-col gap-2">
               {topDocs.map((doc) => (
-                <DocItem key={`top-${doc.text}`} doc={doc} checked={!!checked[`top-${doc.text}`]} onToggle={() => onToggle(`top-${doc.text}`)} />
+                <DocItem key={`top-${doc.text}`} doc={doc} />
               ))}
               {(active.submissionDocs ?? []).map((doc) => (
-                <DocItem key={`track-${activeIdx}-${doc.text}`} doc={doc} checked={!!checked[`track-${activeIdx}-${doc.text}`]} onToggle={() => onToggle(`track-${activeIdx}-${doc.text}`)} />
+                <DocItem key={`track-${activeIdx}-${doc.text}`} doc={doc} />
               ))}
             </ul>
           </div>
@@ -489,8 +472,6 @@ export function SupportMatchDetail() {
               <TrackTabs
                 tracks={infoTracks!}
                 topDocs={submissionDocs}
-                checked={checked}
-                onToggle={toggleDoc}
                 won={won}
               />
             ) : (
@@ -501,12 +482,7 @@ export function SupportMatchDetail() {
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {submissionDocs.map((doc) => (
-                      <DocItem
-                        key={doc.text}
-                        doc={doc}
-                        checked={!!checked[doc.text]}
-                        onToggle={() => toggleDoc(doc.text)}
-                      />
+                      <DocItem key={doc.text} doc={doc} />
                     ))}
                   </ul>
                 )}
