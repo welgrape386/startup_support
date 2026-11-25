@@ -8,16 +8,16 @@
 """
 import json, os, re, time
 from pathlib import Path
-from extract_rules import extract_rules, ask_fields, get_months, _mentions, _place, SEOUL, NEED_SURE, NEED_SOFT, WANT, SELL
+from extract_rules import extract_rules, ask_fields, get_months, _mentions, _place, NEED_SURE, NEED_SOFT, WANT, SELL
 
 CATS = ["음식·카페", "식품 제조·농식품", "도소매·판매", "생활 서비스", "공방·제조", "IT·소프트웨어", "디자인·콘텐츠", "첨단기술", "기타"]
 NEEDS = ["자금", "교육·컨설팅", "공간·시설", "홍보·판매", "인력", "기술개발", "해외진출", "제도·인증", "기타"]
 # 예전 얘기 있으면 지역을 LLM이 다시 봄 (경력 끊겼다가 같은 건 빼고)
 PAST = r"(하|살|운영하|짓|일하|장사하)다가|하던|했던|정리했|접고|접었|이사|예전|작년에"
 # 지원 단어. 하나도 없으면 넓은 질문이라 need null
+# 임대만 있으면 업종일 수 있어서 임대료 · 매장 임대 · 임차만, 직원도 뽑다 · 구하다랑 같이 있을 때만
 NEED_WORDS = "|".join([p for _, p in NEED_SURE + NEED_SOFT] +
                       [r"비용|보증금|지원금|장비|임대료|매장 임대|임차|매장|확장|이전|주문|멘토|직원.{0,10}(뽑|구하|채용|늘리)|뭐부터|어떻게 시작|시작할지|막막"])
-# 임대만 있으면 업종일 수 있어서 임대료 · 매장 임대 · 임차만, 직원도 뽑다 · 구하다랑 같이 있을 때만
 
 # 프롬프트 출처
 # - 업종 표 : 판정규칙 업종 카테고리 매핑 표 (KSIC 안 씀), 2개 기준도 판정규칙
