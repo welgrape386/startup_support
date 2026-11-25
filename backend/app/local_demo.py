@@ -230,7 +230,7 @@ def _run_judgment(profile: dict, announcements: list, notices: dict, extracted: 
                 result_map[pid] = {
                     'pblancId': pid,
                     'signal': '⚪',
-                    'condition_texts': [{'label': '확인 필요', 'text': '자격조건 정보가 없어 직접 확인이 필요해요.'}],
+                    'condition_texts': [],
                 }
                 continue
             try:
