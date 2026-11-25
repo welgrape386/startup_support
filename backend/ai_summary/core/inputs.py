@@ -15,6 +15,7 @@ JUDGE_ID = "pblancId"
 JUDGE_SIGNAL = "signal"
 SIGNAL_TO_VERDICT = {
     "🟢": "green", "🟡": "yellow", "🔴": "red", "⚪": "white",
+    "⚪️": "white",  # 이모지 변형(U+26AA U+FE0F) 대비 — ⚪ 단독과 다른 문자
     # 혹시 글자로 올 때 대비
     "green": "green", "yellow": "yellow", "red": "red", "white": "white",
 }
