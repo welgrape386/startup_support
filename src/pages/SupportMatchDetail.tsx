@@ -522,15 +522,6 @@ export function SupportMatchDetail() {
               <span>{p.agency}{p.operator ? ` · ${p.operator}` : ''}</span>
             </div>
             <div className="flex flex-col gap-[10px]">
-              <a
-                href={p.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonClasses('primary', 'md', 'w-full')}
-              >
-                공고 원문 보기
-                <Icon name="arrow-right" size={15} />
-              </a>
               {applyUrl && (
                 <a
                   href={applyUrl}
