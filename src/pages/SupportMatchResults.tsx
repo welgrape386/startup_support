@@ -4,7 +4,6 @@ import { Badge } from '@/components/Badge'
 import { Button, buttonClasses } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Icon } from '@/components/Icon'
-import { ExcludedList } from '@/components/support/ExcludedList'
 import { MatchCard } from '@/components/support/MatchCard'
 import { ProfileChips } from '@/components/support/ProfileChips'
 import { ResultSummary } from '@/components/support/ResultSummary'
@@ -314,8 +313,9 @@ export function SupportMatchResults() {
                     if (signalFilter !== 'all' && signalFilter !== signal) return null
 
                     const isRed = signal === 'red'
+                    const redItems = isRed ? groupedItems!.red : []
                     const matchItems = isRed
-                      ? []
+                      ? redItems.filter((x) => x.result).map((x) => x.result!)
                       : (groupedItems![signal as Exclude<Verdict, 'red'>] as MatchResult[])
 
                     return (
@@ -331,25 +331,19 @@ export function SupportMatchResults() {
 
                         {/* 오른쪽 패널: 카드 그리드 */}
                         <div className="signal-group__panel">
-                          {isRed ? (
-                            <ExcludedList items={groupedItems!.red} />
+                          {signal === 'unknown' && ageUnknownCount > 0 && (
+                            <p className="mb-3 text-[13px] text-warn">
+                              나이를 알려주시면 {ageUnknownCount}건을 더 정확히 판정할 수 있어요.
+                            </p>
+                          )}
+                          {matchItems.length === 0 ? (
+                            <p className="text-sm text-muted">이 카테고리에 해당하는 공고가 없어요. 다른 카테고리를 확인해보세요.</p>
                           ) : (
-                            <>
-                              {signal === 'unknown' && ageUnknownCount > 0 && (
-                                <p className="mb-3 text-[13px] text-warn">
-                                  나이를 알려주시면 {ageUnknownCount}건을 더 정확히 판정할 수 있어요.
-                                </p>
-                              )}
-                              {matchItems.length === 0 ? (
-                                <p className="text-sm text-muted">이 카테고리에 해당하는 공고가 없어요. 다른 카테고리를 확인해보세요.</p>
-                              ) : (
-                                <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                                  {matchItems.map((r) => (
-                                    <MatchCard key={r.program.id} result={r} profile={res.profile} />
-                                  ))}
-                                </div>
-                              )}
-                            </>
+                            <div className="grid grid-cols-1 items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                              {matchItems.map((r) => (
+                                <MatchCard key={r.program.id} result={r} profile={res.profile} />
+                              ))}
+                            </div>
                           )}
                         </div>
                       </div>
