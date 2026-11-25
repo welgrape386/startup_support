@@ -139,6 +139,8 @@ def support_match(request: SupportMatchRequest, session: Session = Depends(get_s
         raise HTTPException(500, detail='AI_MATCH_MODE는 off / rules / llm만 가능합니다')
 
     payload = get_match_response(request, session, extracted=extracted)
+    from ai_summary import attach_ai_summary
+    attach_ai_summary(payload, extracted)
 
     from app.local_run_store import maybe_save_demo_run
     maybe_save_demo_run(session, payload, extract_raw=_extract_raw)  # opt-in (SAVE_DEMO_RUNS=1)

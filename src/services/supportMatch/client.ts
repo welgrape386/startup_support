@@ -68,5 +68,9 @@ export async function fetchSupportMatch(req: SupportMatchRequest): Promise<Suppo
  * API 연결 시 lines 를 가져오는 부분만 바꾸고, 숫자 검증(verifiedSummaryLines)은 그대로 둔다.
  */
 export async function fetchResultSummary(res: SupportMatchResponse): Promise<{ lines: string[]; source: 'ai' | 'mock' }> {
+  // 백엔드 AI 요약이 있으면 그대로 쓴다. 숫자 검증(verifiedSummaryLines)은 건너뛴다:
+  // 문장 숫자는 서버가 판정 건수·공고 데이터에서 넣은 값이고, 공고명 속 숫자(2026년, 5차)·혜택 숫자(50~80%)까지 검사하면 정상 문장이 버려진다
+  const ai = res.aiSummary?.lines
+  if (ai && ai.length) return { lines: ai.slice(0, 3), source: 'ai' }
   return { lines: verifiedSummaryLines(mockSummaryLines(res), res), source: 'mock' }
 }

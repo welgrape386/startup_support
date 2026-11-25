@@ -185,6 +185,8 @@ export type SupportMatchResponse = {
   summary: MatchSummary
   /** 수집 범위 (명세 6-F) */
   coverage: Coverage
+  /** AI 3줄 요약 (백엔드 ai_summary 파트). 없거나 빈 배열이면 샘플 문장을 쓴다 */
+  aiSummary?: { lines: string[] }
   meta: {
     dataSource: 'live' | 'mock'
     parser: 'llm' | 'rule'
