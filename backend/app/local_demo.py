@@ -479,8 +479,14 @@ def _program(a, today):
     if a.total_budget_text:   data['totalBudgetText']  = a.total_budget_text
     if a.interest_rate:       data['interestRate']     = a.interest_rate
     if a.support_detail:      data['supportDetail']    = a.support_detail
-    if a.submission_docs_json:data['submissionDocs']   = a.submission_docs_json
-    if a.bonus_points_json:   data['bonusPoints']      = a.bonus_points_json
+    if a.submission_docs_json:
+        # DB는 한국어 키 {서류명, 필수, 대상, 근거}, 프론트는 영문 키 {text, required, target}
+        def _doc(d):
+            if isinstance(d, dict) and '서류명' in d:
+                return {'text': d.get('서류명',''), 'required': d.get('필수'), 'target': d.get('대상') or None}
+            return d  # 이미 영문 키인 경우 그대로
+        data['submissionDocs'] = [_doc(d) for d in a.submission_docs_json]
+    if a.bonus_points_json:   data['bonusPoints']      = a.bonus_points_json  # 프론트 타입이 이미 한국어 키
     if a.rounds_json:         data['rounds']           = a.rounds_json
     # 갈색 칸: 새 필드
     if a.self_funding_json:   data['selfFunding']      = a.self_funding_json
