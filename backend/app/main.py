@@ -128,6 +128,7 @@ def support_match(request: SupportMatchRequest, session: Session = Depends(get_s
             from adapter import to_legacy  # sys.path에 user_extraction/ 추가돼 있어서 직접 임포트
             _extract_raw = extract(request.text)
             extracted = to_legacy(_extract_raw)
+            extracted['_row'] = _extract_raw  # to_judge_profile 용
         except Exception as exc:
             raise HTTPException(502, detail=f'사용자 정보 AI 추출 실패: {type(exc).__name__}') from exc
 

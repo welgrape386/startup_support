@@ -210,7 +210,15 @@ def _run_judgment(profile: dict, announcements: list, notices: dict, extracted: 
         # AI 추출 결과가 있으면 더 정확한 판정용 프로필 사용
         u = None
         if extracted is not None:
-            u = _profile_to_u_from_extracted(extracted)
+            row = extracted.get('_row')
+            if row is not None:
+                try:
+                    from user_extract import to_judge_profile
+                    u = to_judge_profile(row)
+                except Exception:
+                    u = None
+            if u is None:
+                u = _profile_to_u_from_extracted(extracted)
         if u is None:
             u = _profile_to_u(profile)
         result_map = {}
