@@ -1,10 +1,12 @@
 """공고 데이터 CSV 4개 → 공고ID별 정보 사전. 서버가 켜질 때 한 번만 읽는다.
 
 data/files/
-  혜택요약_62건.csv    공고ID, 공고명, 혜택요약, 근거                      → title, benefit_summary
-  최대지원금_62건.csv  공고ID, 최대지원금_받는돈 / 융자·투자 / R&D (만원)   → amt_grant, amt_loan_invest, amt_rnd
-  category_map.csv     pblancId + 공고 카테고리 9개 원핫                    → category
-  지원유형_62건.csv    공고ID + 지원유형 21개 원핫                          → support_types
+  benefit_summary_62.csv  (혜택요약)    공고ID, 공고명, 혜택요약, 근거                     → title, benefit_summary
+  max_amount_62.csv       (최대지원금)  공고ID, 최대지원금_받는돈 / 융자·투자 / R&D (만원)  → amt_grant, amt_loan_invest, amt_rnd
+  category_map.csv        (카테고리)    pblancId + 공고 카테고리 9개 원핫                   → category
+  support_types_62.csv    (지원유형)    공고ID + 지원유형 21개 원핫                         → support_types
+
+파일 이름은 영어로 둔다. 한글 파일 이름은 Windows 압축 풀기·git에서 깨지거나 빠질 수 있다.
 
 판정 결과(signal)와 마감일은 여기에 없다. 판정 파트·백엔드에서 받는다 (core/inputs.py).
 나중에 DB로 옮기면 이 파일만 DB 조회로 바꾸면 된다.
@@ -38,10 +40,10 @@ def _onehot(row, names):
     return [n for n in names if str(row.get(n, "")).strip() == "1"]
 
 
-def load_announcements(benefit_csv=FILES / "혜택요약_62건.csv",
-                       amount_csv=FILES / "최대지원금_62건.csv",
+def load_announcements(benefit_csv=FILES / "benefit_summary_62.csv",
+                       amount_csv=FILES / "max_amount_62.csv",
                        category_csv=FILES / "category_map.csv",
-                       support_type_csv=FILES / "지원유형_62건.csv") -> dict:
+                       support_type_csv=FILES / "support_types_62.csv") -> dict:
     ann = {r["공고ID"]: {"title": r["공고명"].strip(),
                          "benefit_summary": r["혜택요약"].strip(),
                          "amt_grant": None, "amt_loan_invest": None, "amt_rnd": None,
