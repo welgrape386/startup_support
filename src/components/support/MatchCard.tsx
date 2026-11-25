@@ -61,7 +61,7 @@ export function MatchCard({ result: r, profile: _profile }: { result: MatchResul
     // 격자 안 카드. 체크리스트는 이 카드 안에서 펼친다 (높이 제한 + 안쪽 스크롤)
     <Card
       padded={false}
-      className="flex flex-col overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+      className="flex h-full flex-col overflow-hidden cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
       role="link"
       tabIndex={0}
       onClick={goDetail}
