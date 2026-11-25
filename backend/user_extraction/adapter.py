@@ -62,6 +62,12 @@ def to_legacy(row: dict) -> dict:
         "사용자프로필": {
             "성별": row.get("gender"),
         },
+        # 프론트 프로필 칩용: 거주지(res)와 사업장/창업예정지(biz/plan) 구분
+        "_profile_extra": {
+            "resSido": row.get("res_sido"),
+            "resSigungu": row.get("res_sigungu"),
+            "bizSigungu": biz_sigungu,  # 예비창업=plan_sigungu, 초기창업=biz_sigungu
+        },
         # local_demo.py의 RAG 검색 인자용 (sx dict)
         "_rag": {
             "query": row.get("input_text", ""),

@@ -343,6 +343,7 @@ def get_profile(text: str, overrides: dict | None):
     profile={
        'age':_extracted(age,'사용자 문장/수정' if age is not None else None),
        'sido':_extracted(sido_new),'sigungu':_extracted(override('sigungu',sigungu)),
+       'bizSigungu':_extracted(override('bizSigungu', None)),  # AI 추출 시 채워짐
        'bizStage':_extracted(override('bizStage',stage)),
        'industryCategory':_extracted(override('industryCategory',category)),
        'industryText':_extracted(None),'targetGroups':groups,'needs':needs,
@@ -498,10 +499,15 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
                 profile[key] = _extracted(value, 'AI 추출')
         put('age', extra.get('나이_언급'))
         put('sido', search.get('검색시도'))
-        put('sigungu', search.get('검색지역'))
         stage = extra.get('창업단계_언급')
         put('bizStage', '예비창업' if stage=='예비' else '초기창업' if stage=='개업' else None)
         put('industryText', search.get('업종원문표현'))
+        # 사업장/창업예정 구 → 프론트 프로필 칩 bizSigungu 필드
+        profile_extra = extracted.get('_profile_extra', {})
+        put('bizSigungu', profile_extra.get('bizSigungu'))
+        # 거주지 구 → 프론트 프로필 칩 sigungu 필드 (사업장 구와 별도)
+        res_sigungu = profile_extra.get('resSigungu')
+        put('sigungu', res_sigungu or search.get('검색지역'))
         # AI 추출 결과에 업종 카테고리가 있으면 채움 (규칙 추출 fallback 보완)
         ai_ind_cat = extra.get('업종_카테고리') or search.get('업종_카테고리')
         if ai_ind_cat and profile.get('industryCategory', {}).get('value') is None:
