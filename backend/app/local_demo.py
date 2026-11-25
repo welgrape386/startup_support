@@ -654,7 +654,7 @@ def get_match_response(request: SupportMatchRequest, session: Session, limit=TOP
                  'conditional':{'bizStage':0,'sigungu':0},'urgent':None,'caution':None},
       'coverage':{'sources':[{'portal':'기업마당','count':len(announcements)}],
                   'total':len(announcements),'asOf':today.isoformat(),'regions':[]},
-      'meta':{'dataSource':'mock','parser':('schema-v0.4-extraction' if extracted is not None else 'rule'),'indexBuiltAt':today.isoformat(),
+      'meta':{'dataSource':'live','parser':('schema-v0.4-extraction' if extracted is not None else 'rule'),'indexBuiltAt':today.isoformat(),
               'totalPrograms':len(announcements),'droppedClaims':0},
       # Additive field; current frontend ignores it. Local patched frontend shows its own notice.
       'demoNotice':LOCAL_DEMO_NOTICE,
