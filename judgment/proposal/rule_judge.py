@@ -832,6 +832,11 @@ def judge_scope(top, track, u, pid, dates, ev, dic):
         res['대안조건' if i == 0 else f'대안조건{i + 1}'] = x
     if not res:  # 판정 조건을 하나도 못 뽑음
         return '⚪', {'자격조건': (UNK, '자격 조건 미기재', {})}, c
+    if '사업자등록' not in res and '업력' not in res:
+        res['사업자등록'] = (OK, None, {})
+    for k in ('지역', '나이', '업종'):
+        res.setdefault(k, (OK, None, {}))
+    res = {k: res[k] for k in sorted(res, key=lambda k: ORDER.index(re.sub(r'\d+$', '', k)) if re.sub(r'\d+$', '', k) in ORDER else 99)}
     return signal_of(res), res, c
 
 
