@@ -8,3 +8,17 @@ data/raw/*
 data/programs.index.json
 *.tsbuildinfo
 !data/raw/manual/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# DB files
+*.db
+*.sqlite
+*.sqlite3
+
+# Local data
+data/startup_support.db
