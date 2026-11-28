@@ -1,6 +1,7 @@
 """추출 결과를 추출 정답셋(gold/extract_gold30)과 비교한다
 
 사용법: python compare_gold.py results/extract_v1_dev_luna [results/extract_v1_dev_sol ...]
+       python compare_gold.py --gold gold/extract_gold30_수정_업종확장 results/extract_v4_eval_terra_업종확장   # 정답 폴더 지정
 출력: 콘솔 요약 + <결과폴더>/compare_gold.csv (공고별), <결과폴더>/compare_gold_diff.txt (공고별로 빠진 것·더 뽑은 것)
 
 비교 방법
@@ -189,5 +190,11 @@ def compare_dir(d):
 
 
 if __name__ == "__main__":
-    for arg in sys.argv[1:]:
+    args = sys.argv[1:]
+    if "--gold" in args:
+        i = args.index("--gold")
+        g = Path(args[i + 1])
+        GOLD = g if g.is_absolute() else ROOT / g
+        del args[i:i + 2]
+    for arg in args:
         compare_dir(ROOT / arg if not Path(arg).is_absolute() else arg)

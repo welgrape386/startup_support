@@ -1,0 +1,9 @@
+{
+  "model": "gpt-6.1-terra",
+  "effort": "high",
+  "max_output_tokens": 64000,
+  "prompt_file": "prompts\\extract_v3.md",
+  "prompt_body_sha256_12": "b4ff747a5a96",
+  "ids_file": "prompts/target_ids_gold30_v4_eval.txt",
+  "started": "2026-11-11T20:23:58"
+}

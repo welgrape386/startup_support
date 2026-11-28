@@ -1,0 +1,67 @@
+{
+ "공고ID": "PBLN_000000000124045",
+ "스키마버전": "안내-v0.3",
+ "지원규모": null,
+ "최대지원금": null,
+ "중복지원": {
+  "상태": "미확인",
+  "내용": null,
+  "근거": null
+ },
+ "지원내용": [
+  {
+   "항목": "멘토링 분야",
+   "내용": "자금조달, 인사/노무, 마케팅, 세무/회계, 특허/법률, (녹색관련) 인증/조달, 경영일반, 기술R&D, 탄소배출권, 해외진출/IR 등",
+   "근거": "자금조달, 인사/노무, 마케팅, 세무/회계, 특허/법률,\n  (녹색관련) 인증/조달, 경영일반, 기술R&D, 탄소배출권,  해외진출/IR 등"
+  },
+  {
+   "항목": "멘토링 지원",
+   "내용": "전문가 매칭 후 멘토링 지원(기업당 최대 3회)",
+   "근거": "전문가 매칭 후 멘토링 지원(기업당 최대 3회)"
+  },
+  {
+   "항목": "신청 비용",
+   "내용": "무료(업체부담금 없음)",
+   "근거": "무료(업체부담금 없음)"
+  }
+ ],
+ "제출서류": [
+  {
+   "서류명": "멘토링 신청서",
+   "필수": true,
+   "대상": null,
+   "근거": "멘토링 신청서 작성"
+  }
+ ],
+ "우대사항": [],
+ "모집일정": [],
+ "트랙": [],
+ "API": {
+  "title": "[서울] 2026년 서울기후테크산업지원센터 경영 및 기술컨설팅 공고",
+  "agency": "서울특별시",
+  "operator": "국가녹색기술연구소",
+  "execution_method": null,
+  "target_name": "중소기업",
+  "summary": "국가녹색기술연구소는 서울시 내 중소기업 및 예비창업자를 위하여 다음과 같이 다양한 전문가 풀을 활용한 맞춤형 멘토링을 무료로 진행하고자 합니다.\n☞ 서울시 소재 녹색분야 중소기업 및 예비창업자\n-「중소기업기본법」제2조의 중소기업으로서, 본사 또는 지사(예비창업자의 경우 주소지) 의 서울시 소재\n- 기획(개발), 판매 중인 제품(기술)의 에너지 절감, 온실가스 저감 등 환경 관련성 필요\n☞ 전문가 매칭 후 멘토링 지원(기업당 최대 3회)",
+  "category_large": "경영",
+  "category_medium": "컨설팅",
+  "apply_start": null,
+  "apply_end": null,
+  "rolling": true,
+  "application_period_raw": "상시 접수",
+  "application_method": "이메일 접수 (greeninfo@nigt.re.kr)",
+  "announcement_url": "https://www.bizinfo.go.kr/sii/siia/selectSIIA200Detail.do?pblancId=PBLN_000000000124045",
+  "application_url": null,
+  "contact": "서울기후테크산업지원센터 02-6261-0884, greeninfo@nigt.re.kr",
+  "attachment_files": [
+   {
+    "name": "2. 멘토링_신청서_(기업명)_(멘토성명)_(차수)_(신청일자26.mm.dd).hwp",
+    "url": "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_000000000763270&fileSn=1"
+   },
+   {
+    "name": "3. 시스템_정보활용_동의서(멘티).hwp",
+    "url": "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_000000000763270&fileSn=2"
+   }
+  ]
+ }
+}

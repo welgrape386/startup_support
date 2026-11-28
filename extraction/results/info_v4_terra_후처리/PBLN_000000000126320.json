@@ -1,0 +1,82 @@
+{
+ "공고ID": "PBLN_000000000126320",
+ "스키마버전": "안내-v0.3",
+ "지원규모": {
+  "값": "3개사",
+  "근거": "3개사"
+ },
+ "최대지원금": null,
+ "중복지원": {
+  "상태": "미확인",
+  "내용": null,
+  "근거": null
+ },
+ "지원내용": [
+  {
+   "항목": "공동관 부스 및 집기",
+   "내용": "공동관 부스 및 집기 제공(약 230만원 상당)",
+   "근거": "공동관 부스 및 집기 제공(약 230만원 상당)"
+  }
+ ],
+ "제출서류": [
+  {
+   "서류명": "참여신청서",
+   "필수": true,
+   "대상": null,
+   "근거": "참여신청서 ⦁참가기업 및 참가제품 정보  PDF"
+  },
+  {
+   "서류명": "동의서",
+   "필수": true,
+   "대상": null,
+   "근거": "동의서  PDF"
+  },
+  {
+   "서류명": "사업자등록증",
+   "필수": true,
+   "대상": null,
+   "근거": "사업자등록증 ⦁사업자등록번호 및 사업장 소재지 확인  PDF"
+  }
+ ],
+ "우대사항": [
+  {
+   "내용": "해당 전시회 신규 참여 업체",
+   "가점": 2,
+   "근거": "해당 전시회 신규 참여 업체 최종 평가점수에 가산 2점 부여"
+  }
+ ],
+ "모집일정": [],
+ "트랙": [],
+ "API": {
+  "title": "2026년 전시회 부스 지원 참여 소상공인 모집 공고(고카프 킨텍스 더 파이널 시즌 PART 2)",
+  "agency": "중소벤처기업부",
+  "operator": "중소상공인희망재단",
+  "execution_method": null,
+  "target_name": "소상공인",
+  "summary": "소상공인의 오프라인 판로 개척 및 전시회 활용력 강화를 위해 전시회 부스 지원 사업에 참여할 소상공인을 다음과 같이 모집하오니 많은 관심과 참여 바랍니다.\n☞ AX 아카데미 교육을 수강한 연간 프리미엄 멤버십 소상공인\n- 대표자 제외 상시 근로자 수 5인 또는 10인 미만의 소상공인(제조업ㆍ운수업ㆍ광업 10인 미만 / 그 외 5인 미만)\n- 각 전시회 참여에 적합한 품목을 보유한 소상공인\n☞ 공동관 부스 및 기본 집기 지원(약 230만원 상당)",
+  "category_large": "내수",
+  "category_medium": "오프라인",
+  "apply_start": "2026-09-08",
+  "apply_end": "2026-10-16",
+  "rolling": false,
+  "application_period_raw": "2026-09-08 ~ 2026-10-16",
+  "application_method": "온라인 접수 (중소상공인희망재단)",
+  "announcement_url": "https://www.bizinfo.go.kr/sii/siia/selectSIIA200Detail.do?pblancId=PBLN_000000000126320",
+  "application_url": "https://heemangfdn.or.kr/layout/res/home.php?go=page1.1",
+  "contact": "중소상공인희망재단 디지털혁신사업부 070-4267-8256, pjh@heemangfdn.or.kr",
+  "attachment_files": [
+   {
+    "name": "별첨 3. 고카프 소개자료.pdf",
+    "url": "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_000000000772721&fileSn=1"
+   },
+   {
+    "name": "별첨 1. 2026년 전시회 부스 지원 참여 신청서 양식.hwp",
+    "url": "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_000000000772721&fileSn=2"
+   },
+   {
+    "name": "별첨 2. 개인·기업 정보 수집이용 및 제3자 제공 프리미엄 멤버십 회비 반환 불가 동의서 양식.hwp",
+    "url": "https://www.bizinfo.go.kr/cmm/fms/getImageFile.do?atchFileId=FILE_000000000772721&fileSn=3"
+   }
+  ]
+ }
+}
