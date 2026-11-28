@@ -8,3 +8,11 @@ data/raw/*
 data/programs.index.json
 *.tsbuildinfo
 !data/raw/manual/
+
+# Python
+__pycache__/
+*.pyc
+
+# 추출 작업 폴더에서 다시 만들 수 있는 것 (원본 공고문, 텍스트 사본)
+extraction/output/
+extraction/results/v*/texts/
