@@ -6,7 +6,7 @@
 그다음: python expand_industry_refs.py results/service_v4 → results/service_v4_업종확장/ (주희님께 드릴 판정 입력)
 
 - 추출 성능 평가에는 이 폴더를 쓰지 않는다 (정답 30건이 들어 있어 점수가 부풀려짐). 평가는 results/extract_v4_*_terra 원본으로
-- 정답셋 업종명은 Claude가 작성한 것이라 정예은 검수 전 (gold/README.md 11/12)
+- 정답셋 업종명은 정예은 검수 전 (gold/README.md 11/12)
 """
 import csv
 import json
