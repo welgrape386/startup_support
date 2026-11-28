@@ -1,7 +1,7 @@
 # 공고 조건 추출 (extraction) 실행에 필요한 라이브러리
 # 개발 때 쓴 버전 (Python 3)
 openai==3.46.0
-anthropic==0.92.0        # run_extraction.py에서 claude-* 모델을 쓸 때만 필요
+anthropic==0.92.0        # run_extraction.py에서 Anthropic 모델을 쓸 때만 필요 (기본은 OpenAI)
 python-dotenv==1.2.2
 pandas==3.0.2
 pymupdf==1.28.2          # PDF 텍스트 추출
